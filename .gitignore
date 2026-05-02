@@ -1,0 +1,23 @@
+# Ambientes Virtuais Python
+venv/
+env/
+.venv/
+
+# Arquivos de compilação do Python
+__pycache__/
+*.pyc
+
+# Banco de dados de desenvolvimento local (como usaremos MySQL na Vercel/Nuvem, ignore o SQLite padrão do Django)
+db.sqlite3
+
+# Arquivos de Variáveis de Ambiente
+.env
+.env.local
+
+# Arquivos de IDE (VSCode, PyCharm, etc)
+.vscode/
+.idea/
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db
