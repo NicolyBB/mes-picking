@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Importação • Dashboard MES</title>
+    <title>Importação Dashboard MES</title>
     <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
     <link rel="stylesheet" href="../../style.css">
 </head>
 <body class="dashboard-mes">
-
     <header>
         <div class="header-left">
             <div class="logo-container">
@@ -19,12 +18,11 @@
         </div>
         <div class="header-right">
             <button class="theme-toggle" id="themeToggle" title="Alternar tema">
-                <span class="theme-icon">🌙</span>
+                <span class="theme-icon"></span>
             </button>
             <span class="data-atual" id="dataAtual"></span>
         </div>
     </header>
-
     <nav class="nav-menu">
         <a href="../index/index.html" class="nav-item">KPIs Tempo Real</a>
         <a href="#" class="nav-item active">Importação</a>
@@ -33,70 +31,64 @@
         <a href="../gerir-kpis/gerir-kpis.html" class="nav-item">Gerir KPIs</a>
         <a href="../webhooks/webhooks.html" class="nav-item">Webhooks</a>
     </nav>
-
     <main class="dashboard">
-        <!-- Upload Section -->
         <section class="upload-section">
             <div class="upload-header">
-                <h2>📥 Importar Arquivos</h2>
+                <h2>Importar Arquivos</h2>
                 <span class="upload-subtitle">Suporta arquivos CSV e XLSX</span>
             </div>
-
             <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📁</div>
+                <div class="upload-icon"></div>
                 <p class="upload-text">Arraste arquivos aqui ou clique para selecionar</p>
                 <p class="upload-formats">Formatos aceitos: .csv, .xlsx, .xls</p>
-                <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" multiple hidden>
+                <input type="file" id="fileInput" accept=".csv, .xlsx, .xls" multiple hidden>
             </div>
-
             <div class="upload-actions">
                 <button class="btn btn-primary" id="btnImportar">
-                    <span>📤</span> Importar Arquivos
+                    <span></span> Importar Arquivos
                 </button>
                 <button class="btn btn-secondary" id="btnLimpar">
-                    <span>🗑️</span> Limpar Seleção
+                    <span></span> Limpar Seleção
                 </button>
             </div>
         </section>
 
-        <!-- Arquivos Selecionados -->
         <section class="files-section">
-            <h2>📋 Arquivos Selecionados</h2>
+            <h2>Arquivos Selecionados</h2>
             <div class="files-list" id="filesList">
                 <div class="files-empty">
-                    <span class="empty-icon">📭</span>
+                    <span class="empty-icon"></span>
                     <p>Nenhum arquivo selecionado</p>
                 </div>
             </div>
         </section>
 
-        <!-- Status e Progresso -->
         <section class="status-section">
-            <h2>⚙️ Status das Importações</h2>
+            <h2>Status das Importações</h2>
             <div class="status-grid">
                 <div class="status-card status-pendente">
-                    <div class="status-icon">⏳</div>
+                    <div class="status-icon"></div>
                     <div class="status-info">
                         <span class="status-count" id="countPendente">0</span>
                         <span class="status-label">Pendentes</span>
                     </div>
                 </div>
                 <div class="status-card status-processando">
-                    <div class="status-icon">🔄</div>
+                    <div class="status-icon"></div>
                     <div class="status-info">
                         <span class="status-count" id="countProcessando">0</span>
                         <span class="status-label">Processando</span>
                     </div>
                 </div>
                 <div class="status-card status-sucesso">
-                    <div class="status-icon">✅</div>
+                    <div class="status-icon"></div>
                     <div class="status-info">
                         <span class="status-count" id="countSucesso">12</span>
                         <span class="status-label">Sucesso</span>
                     </div>
                 </div>
                 <div class="status-card status-erro">
-                    <div class="status-icon">❌</div>
+                    <div class="status-icon"></div>
                     <div class="status-info">
                         <span class="status-count" id="countErro">0</span>
                         <span class="status-label">Erros</span>
@@ -105,9 +97,8 @@
             </div>
         </section>
 
-        <!-- Histórico de Importações -->
         <section class="history-section">
-            <h2>📜 Histórico de Importações</h2>
+            <h2>Histórico de Importações</h2>
             <div class="history-table-wrapper">
                 <table class="history-table">
                     <thead>
@@ -126,10 +117,10 @@
                             <td class="history-file">pedidos_maio_2026.csv</td>
                             <td><span class="tag tag-csv">CSV</span></td>
                             <td>1.250 registros</td>
-                            <td><span class="status-badge status-success">✅ Sucesso</span></td>
+                            <td><span class="status-badge status-success">Sucesso</span></td>
                             <td>
-                                <button class="btn-icon" title="Baixar">📥</button>
-                                <button class="btn-icon" title="Excluir">🗑️</button>
+                                <button class="btn-icon" title="Baixar"></button>
+                                <button class="btn-icon" title="Excluir"></button>
                             </td>
                         </tr>
                         <tr class="history-row">
@@ -137,10 +128,10 @@
                             <td class="history-file">funcionarios_atualizado.xlsx</td>
                             <td><span class="tag tag-xlsx">XLSX</span></td>
                             <td>45 registros</td>
-                            <td><span class="status-badge status-success">✅ Sucesso</span></td>
+                            <td><span class="status-badge status-success">Sucesso</span></td>
                             <td>
-                                <button class="btn-icon" title="Baixar">📥</button>
-                                <button class="btn-icon" title="Excluir">🗑️</button>
+                                <button class="btn-icon" title="Baixar"></button>
+                                <button class="btn-icon" title="Excluir"></button>
                             </td>
                         </tr>
                         <tr class="history-row">
@@ -148,10 +139,10 @@
                             <td class="history-file">estoque_parcial.csv</td>
                             <td><span class="tag tag-csv">CSV</span></td>
                             <td>890 registros</td>
-                            <td><span class="status-badge status-warning">⚠️ Parcial</span></td>
+                            <td><span class="status-badge status-warning">Parcial</span></td>
                             <td>
-                                <button class="btn-icon" title="Baixar">📥</button>
-                                <button class="btn-icon" title="Excluir">🗑️</button>
+                                <button class="btn-icon" title="Baixar"></button>
+                                <button class="btn-icon" title="Excluir"></button>
                             </td>
                         </tr>
                         <tr class="history-row">
@@ -159,10 +150,10 @@
                             <td class="history-file">categorias_produtos.xlsx</td>
                             <td><span class="tag tag-xlsx">XLSX</span></td>
                             <td>320 registros</td>
-                            <td><span class="status-badge status-error">❌ Erro</span></td>
+                            <td><span class="status-badge status-error">Erro</span></td>
                             <td>
-                                <button class="btn-icon" title="Baixar">📥</button>
-                                <button class="btn-icon" title="Excluir">🗑️</button>
+                                <button class="btn-icon" title="Baixar"></button>
+                                <button class="btn-icon" title="Excluir"></button>
                             </td>
                         </tr>
                     </tbody>
@@ -170,12 +161,11 @@
             </div>
         </section>
 
-        <!-- Configurações de Importação -->
         <section class="config-section">
-            <h2>⚙️ Configurações</h2>
+            <h2>Configurações</h2>
             <div class="config-grid">
                 <div class="config-card">
-                    <h3>📊 Mapeamento de Campos</h3>
+                    <h3>Mapeamento de Campos</h3>
                     <p class="config-desc">Configure como cada coluna será importada</p>
                     <div class="config-preview">
                         <span class="config-tag">SKU → codigo_produto</span>
@@ -185,7 +175,7 @@
                     <button class="btn btn-small">Editar Mapeamento</button>
                 </div>
                 <div class="config-card">
-                    <h3>🔄 Modo de Importação</h3>
+                    <h3>Modo de Importação</h3>
                     <p class="config-desc">Como tratar dados existentes</p>
                     <div class="radio-group">
                         <label class="radio-option">
@@ -203,7 +193,7 @@
                     </div>
                 </div>
                 <div class="config-card">
-                    <h3>📐 Validações</h3>
+                    <h3>Validações</h3>
                     <p class="config-desc">Regras para validar dados</p>
                     <div class="checkbox-group">
                         <label class="checkbox-option">
@@ -223,8 +213,6 @@
             </div>
         </section>
     </main>
-
     <script src="../../script.js"></script>
-
 </body>
 </html>

@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aging Stock • Dashboard MES</title>
+    <title>Aging Stock Dashboard MES</title>
     <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
     <link rel="stylesheet" href="../../style.css">
 </head>
 <body class="dashboard-mes">
-
     <header>
         <div class="header-left">
             <div class="logo-container">
@@ -19,24 +18,22 @@
         </div>
         <div class="header-right">
             <button class="theme-toggle" id="themeToggle" title="Alternar tema">
-                <span class="theme-icon">🌙</span>
+                <span class="theme-icon"></span>
             </button>
             <span class="data-atual" id="dataAtual"></span>
         </div>
     </header>
-
     <nav class="nav-menu">
         <a href="../index/index.html" class="nav-item">KPIs Tempo Real</a>
         <a href="../importacao/importacao.html" class="nav-item">Importação</a>
         <a href="#" class="nav-item active">Aging Stock</a>
         <a href="../funcionarios/funcionarios.html" class="nav-item">Funcionários</a>
         <a href="../gerir-kpis/gerir-kpis.html" class="nav-item">Gerir KPIs</a>
-        <a href="#" class="nav-item">Webhooks</a>
+        <a href="../webhooks/webhooks.html" class="nav-item">Webhooks</a>
     </nav>
-
     <main class="dashboard">
         <section class="section">
-            <h2>📊 Aging Stock - Visão Geral</h2>
+            <h2>Aging Stock - Visão Geral</h2>
             <div class="aging-summary">
                 <div class="aging-stat">
                     <span class="aging-value">156</span>
@@ -52,9 +49,8 @@
                 </div>
             </div>
         </section>
-
         <section class="section">
-            <h2>⚠️ Itens Críticos (+30 dias)</h2>
+            <h2>! Itens Críticos (+30 dias)</h2>
             <div class="aging-list">
                 <div class="aging-item critical">
                     <div class="aging-info">
@@ -88,9 +84,8 @@
                 </div>
             </div>
         </section>
-
         <section class="section">
-            <h2>📈 Classificação por Faixa de Dias</h2>
+            <h2>Classificação por Faixa de Dias</h2>
             <div class="aging-ranges">
                 <div class="aging-range">
                     <div class="range-bar range-0-7"></div>
@@ -115,8 +110,6 @@
             </div>
         </section>
     </main>
-
     <script src="../../script.js"></script>
-
 </body>
 </html>
