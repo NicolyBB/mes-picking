@@ -2787,3 +2787,121 @@ body.supervisor-mes .operators-grid {
         font-size: 14px;
     }
 }
+
+/* ==========================================================================
+   ========== Adições para Arquitetura PWA e Feedback Sensorial (MES) =======
+   ========================================================================== */
+
+/* Utilitário para ocultar elementos dinamicamente via JS (Simulação de SPA) */
+.hidden {
+    display: none !important;
+}
+
+/* Feedback Sensorial - Sucesso (Flash Verde) */
+.flash-success {
+    animation: flashGreen 0.5s ease-out;
+}
+
+/* Feedback Sensorial - Erro (Flash Vermelho) */
+.flash-error {
+    animation: flashRed 0.8s ease-out;
+}
+
+@keyframes flashGreen {
+    0% { background-color: #28a745; }
+    100% { background-color: #0b1220; /* Cor de fundo original da sua pnl-pick */ }
+}
+
+@keyframes flashRed {
+    0% { background-color: #dc3545; }
+    50% { background-color: #ff0000; }
+    100% { background-color: #0b1220; /* Cor de fundo original da sua pnl-pick */ }
+}
+
+/* Container de status para a comunicação do leitor (Substitui o botão de simular) */
+#status-comunicacao {
+    margin-top: 20px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+}
+
+.status-off {
+    background-color: transparent;
+    color: #888;
+    border: 1px dashed #444;
+}
+
+.status-processando {
+    background-color: #d4af11;
+    color: #003366;
+    animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+    from { opacity: 0.8; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1.02); }
+}
+
+/* ==========================================================================
+   ========== CSS Real da Câmera (Html5-QRCode) ==============================
+   ========================================================================== */
+   
+#scanner-modal {
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background: rgba(11, 18, 32, 0.95); /* Fundo escuro Kyly */
+    z-index: 9999;
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+}
+
+#scanner-modal.hidden { 
+    display: none !important; 
+}
+
+.scanner-container {
+    width: 90%; 
+    max-width: 400px; 
+    background: #fff; 
+    border-radius: 12px; 
+    padding: 10px; 
+    position: relative;
+    box-shadow: 0 10px 40px rgba(212, 175, 17, 0.3);
+}
+
+#btn-fechar-scanner {
+    position: absolute; 
+    top: -15px; 
+    right: -15px; 
+    background: #dc3545; 
+    color: #fff;
+    border: none; 
+    border-radius: 50%; 
+    width: 45px; 
+    height: 45px; 
+    font-weight: bold; 
+    font-size: 20px; 
+    z-index: 10000;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+/* Força o leitor a caber na tela do celular */
+#reader { 
+    width: 100%; 
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#reader video {
+    object-fit: cover;
+}
