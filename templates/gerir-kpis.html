@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerir KPIs • Dashboard MES</title>
+    <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="dashboard-mes">
+
+    <header>
+        <div class="header-left">
+            <div class="logo-container">
+                <span class="logo-text">MES</span>
+                <span class="logo-subtitle">PICKING</span>
+            </div>
+            <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="kyly-logo">
+        </div>
+        <div class="header-right">
+            <button class="theme-toggle" id="themeToggle" title="Alternar tema">
+                <span class="theme-icon">🌙</span>
+            </button>
+            <span class="data-atual" id="dataAtual"></span>
+        </div>
+    </header>
+
+    <nav class="nav-menu">
+        <a href="../index/index.html" class="nav-item">KPIs Tempo Real</a>
+        <a href="../importacao/importacao.html" class="nav-item">Importação</a>
+        <a href="../aging-stock/aging-stock.html" class="nav-item">Aging Stock</a>
+        <a href="../funcionarios/funcionarios.html" class="nav-item">Funcionários</a>
+        <a href="#" class="nav-item active">Gerir KPIs</a>
+        <a href="../webhooks/webhooks.html" class="nav-item">Webhooks</a>
+    </nav>
+
+    <main class="dashboard">
+        <section class="section">
+            <h2>⚙️ Configuração de Metas</h2>
+            <div class="kpi-config-grid">
+                <div class="kpi-config-item">
+                    <label>Meta PPH</label>
+                    <input type="number" value="65" class="kpi-input">
+                    <span class="kpi-unit">peças/hora</span>
+                </div>
+                <div class="kpi-config-item">
+                    <label>Tempo Médio Meta</label>
+                    <input type="text" value="15:00" class="kpi-input">
+                    <span class="kpi-unit">minutos</span>
+                </div>
+                <div class="kpi-config-item">
+                    <label>Streak Mínimo</label>
+                    <input type="number" value="10" class="kpi-input">
+                    <span class="kpi-unit">caixas</span>
+                </div>
+                <div class="kpi-config-item">
+                    <label>Taxa Acerto Mínima</label>
+                    <input type="number" value="95" class="kpi-input">
+                    <span class="kpi-unit">%</span>
+                </div>
+            </div>
+            <button class="btn btn-primary" style="margin-top: 20px;">💾 Salvar Configurações</button>
+        </section>
+
+        <section class="section">
+            <h2>📊 Indicadores Configurados</h2>
+            <div class="kpi-list">
+                <div class="kpi-item">
+                    <span class="kpi-name">PPH</span>
+                    <span class="kpi-meta">Meta: 65 | Atual: 48</span>
+                    <span class="kpi-status warning">⏳ Abaixo</span>
+                </div>
+                <div class="kpi-item">
+                    <span class="kpi-name">Tempo Médio</span>
+                    <span class="kpi-meta">Meta: 15:00 | Atual: 12:30</span>
+                    <span class="kpi-status success">✅ OK</span>
+                </div>
+                <div class="kpi-item">
+                    <span class="kpi-name">Taxa de Acerto</span>
+                    <span class="kpi-meta">Meta: 95% | Atual: 98%</span>
+                    <span class="kpi-status success">✅ OK</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../../script.js"></script>
+
+</body>
+</html>

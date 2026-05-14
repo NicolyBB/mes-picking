@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aging Stock • Dashboard MES</title>
+    <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="dashboard-mes">
+
+    <header>
+        <div class="header-left">
+            <div class="logo-container">
+                <span class="logo-text">MES</span>
+                <span class="logo-subtitle">PICKING</span>
+            </div>
+            <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="kyly-logo">
+        </div>
+        <div class="header-right">
+            <button class="theme-toggle" id="themeToggle" title="Alternar tema">
+                <span class="theme-icon">🌙</span>
+            </button>
+            <span class="data-atual" id="dataAtual"></span>
+        </div>
+    </header>
+
+    <nav class="nav-menu">
+        <a href="../index/index.html" class="nav-item">KPIs Tempo Real</a>
+        <a href="../importacao/importacao.html" class="nav-item">Importação</a>
+        <a href="#" class="nav-item active">Aging Stock</a>
+        <a href="../funcionarios/funcionarios.html" class="nav-item">Funcionários</a>
+        <a href="../gerir-kpis/gerir-kpis.html" class="nav-item">Gerir KPIs</a>
+        <a href="#" class="nav-item">Webhooks</a>
+    </nav>
+
+    <main class="dashboard">
+        <section class="section">
+            <h2>📊 Aging Stock - Visão Geral</h2>
+            <div class="aging-summary">
+                <div class="aging-stat">
+                    <span class="aging-value">156</span>
+                    <span class="aging-label">SKUs em estoque</span>
+                </div>
+                <div class="aging-stat">
+                    <span class="aging-value">23</span>
+                    <span class="aging-label">Muitos dias sem movimento</span>
+                </div>
+                <div class="aging-stat">
+                    <span class="aging-value">8</span>
+                    <span class="aging-label">Críticos (+30 dias)</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>⚠️ Itens Críticos (+30 dias)</h2>
+            <div class="aging-list">
+                <div class="aging-item critical">
+                    <div class="aging-info">
+                        <span class="aging-code">SKU-12345</span>
+                        <span class="aging-name">Produto Exemplo Alpha</span>
+                    </div>
+                    <div class="aging-details">
+                        <span class="aging-days">45 dias</span>
+                        <span class="aging-qty">120 un</span>
+                    </div>
+                </div>
+                <div class="aging-item critical">
+                    <div class="aging-info">
+                        <span class="aging-code">SKU-98765</span>
+                        <span class="aging-name">Componente Beta</span>
+                    </div>
+                    <div class="aging-details">
+                        <span class="aging-days">38 dias</span>
+                        <span class="aging-qty">85 un</span>
+                    </div>
+                </div>
+                <div class="aging-item warning">
+                    <div class="aging-info">
+                        <span class="aging-code">SKU-55443</span>
+                        <span class="aging-name">Item Gamma Plus</span>
+                    </div>
+                    <div class="aging-details">
+                        <span class="aging-days">32 dias</span>
+                        <span class="aging-qty">200 un</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>📈 Classificação por Faixa de Dias</h2>
+            <div class="aging-ranges">
+                <div class="aging-range">
+                    <div class="range-bar range-0-7"></div>
+                    <span class="range-label">0-7 dias</span>
+                    <span class="range-count">89 SKUs</span>
+                </div>
+                <div class="aging-range">
+                    <div class="range-bar range-8-15"></div>
+                    <span class="range-label">8-15 dias</span>
+                    <span class="range-count">34 SKUs</span>
+                </div>
+                <div class="aging-range">
+                    <div class="range-bar range-16-30"></div>
+                    <span class="range-label">16-30 dias</span>
+                    <span class="range-count">15 SKUs</span>
+                </div>
+                <div class="aging-range">
+                    <div class="range-bar range-30-plus"></div>
+                    <span class="range-label">+30 dias</span>
+                    <span class="range-count">8 SKUs</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../../script.js"></script>
+
+</body>
+</html>

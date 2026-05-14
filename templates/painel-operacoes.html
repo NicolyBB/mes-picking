@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Operações · SUPERVISORKYLY MES</title>
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="supervisor-mes">
+
+    <header class="page-header">
+        <div class="header-main">
+            <div class="brand-area">
+                <button class="back-button" id="backButton" type="button" aria-label="Voltar">
+                    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M19 12H5m6-7-7 7 7 7"/>
+                    </svg>
+                </button>
+
+                <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="supervisor-logo">
+
+                <div class="title-group">
+                    <span class="product-name">SUPERVISOR · KYLY MES</span>
+                    <h1>Painel de Operações</h1>
+                </div>
+            </div>
+
+            <div class="header-actions">
+                <button class="theme-toggle" id="themeToggle" type="button" title="Alternar tema" aria-label="Alternar tema">
+                    <span class="theme-icon">🌙</span>
+                </button>
+
+                <div class="header-metrics" aria-label="Resumo da operação">
+                    <div class="header-metric">
+                        <span>Operadores</span>
+                        <strong id="operadoresAtivos">4/6</strong>
+                    </div>
+                    <div class="header-metric header-metric-alert">
+                        <span>Exceções</span>
+                        <strong id="excecoes">3</strong>
+                    </div>
+                    <div class="header-metric">
+                        <span>PPH Médio</span>
+                        <strong id="pphMedio">105</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="tab-bar" aria-label="Seções do painel">
+            <button class="tab-button active" type="button" data-tab="equipe">
+                <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 12h3l2-6 4 13 3-8 2 4h4"/>
+                </svg>
+                <span>Equipe</span>
+            </button>
+            <button class="tab-button" type="button" data-tab="excecoes">
+                <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M10.3 4.2 2.7 17.3A2 2 0 0 0 4.4 20h15.2a2 2 0 0 0 1.7-2.7L13.7 4.2a2 2 0 0 0-3.4 0Z"/>
+                    <path d="M12 9v4m0 3h.01"/>
+                </svg>
+                <span>Exceções</span>
+                <span class="tab-badge" id="badgeExcecoes">3</span>
+            </button>
+        </nav>
+    </header>
+
+    <main class="dashboard">
+        <section class="tab-content active" id="tab-equipe">
+            <section class="filter-panel" aria-label="Filtros por período">
+                <div class="filter-left">
+                    <svg class="calendar-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M8 2v4m8-4v4M3 10h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/>
+                    </svg>
+                    <span class="filter-caption">Filtrar por:</span>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" type="button" data-filter="hoje">Hoje</button>
+                        <button class="filter-btn" type="button" data-filter="ontem">Ontem</button>
+                        <button class="filter-btn" type="button" data-filter="7dias">7 dias</button>
+                        <button class="filter-btn" type="button" data-filter="30dias">30 dias</button>
+                        <button class="filter-btn" type="button" data-filter="personalizado">Personalizado</button>
+                    </div>
+                </div>
+                <span class="filter-current" id="filterCurrent">Hoje</span>
+            </section>
+
+            <section class="metrics-grid" aria-label="Indicadores da equipe">
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>Caixas</span>
+                        <svg class="metric-icon green" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m12 3 4 2.3v4.6L12 12.2 8 9.9V5.3L12 3Zm-6 9 4 2.3v4.6L6 21.2l-4-2.3v-4.6L6 12Zm12 0 4 2.3v4.6l-4 2.3-4-2.3v-4.6L18 12Z"/>
+                        </svg>
+                    </div>
+                    <strong>287</strong>
+                    <small class="positive">+12 vs. ontem</small>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>Lead Time Médio</span>
+                        <svg class="metric-icon green" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M12 7v5l4 2"/>
+                        </svg>
+                    </div>
+                    <strong>11.4 min</strong>
+                    <small class="positive">vs. meta 12 min</small>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>PPH Equipe</span>
+                        <svg class="metric-icon orange" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m3 17 6-6 4 4 7-8"/>
+                            <path d="M14 7h6v6"/>
+                        </svg>
+                    </div>
+                    <strong>105</strong>
+                    <small class="warning">meta 130</small>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>Acurácia</span>
+                        <svg class="metric-icon green" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <circle cx="12" cy="12" r="5"/>
+                            <circle cx="12" cy="12" r="1.5"/>
+                        </svg>
+                    </div>
+                    <strong>99.2%</strong>
+                    <small class="positive">erro &lt; 1%</small>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>Tempo Resolução</span>
+                        <svg class="metric-icon orange" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="13" r="7"/>
+                            <path d="M12 9v4l3 2M9 2h6M5 5 3.5 3.5M19 5l1.5-1.5"/>
+                        </svg>
+                    </div>
+                    <strong>2m 45s</strong>
+                    <small class="warning">exceções</small>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>SLA Cumprido</span>
+                        <svg class="metric-icon green" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/>
+                        </svg>
+                    </div>
+                    <strong>96%</strong>
+                    <small class="positive">meta 95%</small>
+                </article>
+            </section>
+
+            <section class="search-row" aria-label="Busca de operadores">
+                <label class="search-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7"/>
+                        <path d="m20 20-3.5-3.5"/>
+                    </svg>
+                    <input
+                        type="search"
+                        id="searchInput"
+                        autocomplete="off"
+                        placeholder="Buscar por crachá, nome ou caixa..."
+                        aria-label="Buscar por crachá, nome ou caixa"
+                    >
+                </label>
+                <div class="search-side" aria-hidden="true"></div>
+            </section>
+
+            <section class="operators-grid" id="operatorsGrid" aria-label="Operadores"></section>
+        </section>
+
+        <section class="tab-content" id="tab-excecoes">
+            <section class="filter-panel" aria-label="Filtros por período">
+                <div class="filter-left">
+                    <svg class="calendar-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M8 2v4m8-4v4M3 10h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/>
+                    </svg>
+                    <span class="filter-caption">Filtrar por:</span>
+                    <div class="filter-buttons">
+                        <button class="filter-btn active" type="button" data-filter="hoje">Hoje</button>
+                        <button class="filter-btn" type="button" data-filter="ontem">Ontem</button>
+                        <button class="filter-btn" type="button" data-filter="7dias">7 dias</button>
+                        <button class="filter-btn" type="button" data-filter="30dias">30 dias</button>
+                        <button class="filter-btn" type="button" data-filter="personalizado">Personalizado</button>
+                    </div>
+                </div>
+                <span class="filter-current">Hoje</span>
+            </section>
+
+            <section class="metrics-grid" aria-label="Indicadores de exceções">
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>Caixas</span>
+                        <svg class="metric-icon green" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m12 3 4 2.3v4.6L12 12.2 8 9.9V5.3L12 3Zm-6 9 4 2.3v4.6L6 21.2l-4-2.3v-4.6L6 12Zm12 0 4 2.3v4.6l-4 2.3-4-2.3v-4.6L18 12Z"/>
+                        </svg>
+                    </div>
+                    <strong>287</strong>
+                    <small class="positive">+12 vs. ontem</small>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>Lead Time Médio</span>
+                        <svg class="metric-icon green" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <path d="M12 7v5l4 2"/>
+                        </svg>
+                    </div>
+                    <strong>11.4 min</strong>
+                    <small class="positive">vs. meta 12 min</small>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>PPH Equipe</span>
+                        <svg class="metric-icon orange" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m3 17 6-6 4 4 7-8"/>
+                            <path d="M14 7h6v6"/>
+                        </svg>
+                    </div>
+                    <strong>105</strong>
+                    <small class="warning">meta 130</small>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>Acurácia</span>
+                        <svg class="metric-icon green" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="9"/>
+                            <circle cx="12" cy="12" r="5"/>
+                            <circle cx="12" cy="12" r="1.5"/>
+                        </svg>
+                    </div>
+                    <strong>99.2%</strong>
+                    <small class="positive">erro &lt; 1%</small>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>Tempo Resolução</span>
+                        <svg class="metric-icon orange" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="13" r="7"/>
+                            <path d="M12 9v4l3 2M9 2h6M5 5 3.5 3.5M19 5l1.5-1.5"/>
+                        </svg>
+                    </div>
+                    <strong>2m 45s</strong>
+                    <small class="warning">exceções</small>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-top">
+                        <span>SLA Cumprido</span>
+                        <svg class="metric-icon green" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/>
+                        </svg>
+                    </div>
+                    <strong>96%</strong>
+                    <small class="positive">meta 95%</small>
+                </article>
+            </section>
+
+            <section class="exceptions-table-card" aria-label="Lista de exceções">
+                <table class="exceptions-table">
+                    <colgroup>
+                        <col class="exception-col-id">
+                        <col class="exception-col-operator">
+                        <col class="exception-col-type">
+                        <col class="exception-col-reason">
+                        <col class="exception-col-action">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Operador</th>
+                            <th>Tipo</th>
+                            <th>Motivo</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exceptionsList"></tbody>
+                </table>
+            </section>
+        </section>
+    </main>
+
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="operator-drawer" id="operatorDrawer" aria-hidden="true">
+        <div class="drawer-header">
+            <h2 id="drawerTitle">Detalhes do Operador</h2>
+            <button class="drawer-close" id="drawerClose" type="button" aria-label="Fechar">
+                <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M18 6 6 18M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="drawer-content" id="drawerInfo"></div>
+    </aside>
+
+    <div class="master-code-overlay" id="masterCodeOverlay" aria-hidden="true">
+        <section class="master-code-modal" role="dialog" aria-modal="true" aria-labelledby="masterCodeTitle">
+            <div class="master-code-heading">
+                <div class="master-code-icon" aria-hidden="true">
+                    <svg width="27" height="27" viewBox="0 0 24 24">
+                        <path d="M12 3 5 6v5c0 4.4 2.8 8.4 7 10 4.2-1.6 7-5.6 7-10V6l-7-3Z"/>
+                        <path d="m9 12 2 2 4-5"/>
+                    </svg>
+                </div>
+                <h2 id="masterCodeTitle">Liberação de Master Code</h2>
+            </div>
+
+            <p class="master-code-copy">
+                Bipe seu crachá para autorizar a exceção <strong id="masterCodeExceptionId">EX-9981</strong>.
+                O supervisor_id será gravado em LOG_BIPAGEM.
+            </p>
+
+            <input
+                class="master-code-input"
+                id="masterCodeInput"
+                type="text"
+                autocomplete="off"
+                placeholder="Crachá supervisor..."
+                aria-label="Crachá supervisor"
+            >
+
+            <div class="master-code-actions">
+                <button class="master-code-btn cancel" id="masterCodeCancel" type="button">Cancelar</button>
+                <button class="master-code-btn confirm" id="masterCodeConfirm" type="button">Confirmar</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="../../script.js"></script>
+</body>
+</html>

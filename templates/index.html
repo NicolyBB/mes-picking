@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard MES • PICKING</title>
+    <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="dashboard-mes">
+
+    <header>
+        <div class="header-left">
+            <div class="logo-container">
+                <span class="logo-text">MES</span>
+                <span class="logo-subtitle">PICKING</span>
+            </div>
+            <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="kyly-logo">
+        </div>
+        <div class="header-right">
+            <button class="theme-toggle" id="themeToggle" title="Alternar tema">
+                <span class="theme-icon">🌙</span>
+            </button>
+            <span class="data-atual" id="dataAtual"></span>
+        </div>
+    </header>
+
+    <nav class="nav-menu">
+        <a href="../index/index.html" class="nav-item active">KPIs Tempo Real</a>
+        <a href="../importacao/importacao.html" class="nav-item">Importação</a>
+        <a href="../aging-stock/aging-stock.html" class="nav-item">Aging Stock</a>
+        <a href="../funcionarios/funcionarios.html" class="nav-item">Funcionários</a>
+        <a href="../gerir-kpis/gerir-kpis.html" class="nav-item">Gerir KPIs</a>
+        <a href="../webhooks/webhooks.html" class="nav-item">Webhooks</a>
+    </nav>
+
+    <main class="dashboard">
+        <!-- Barra de progresso geral -->
+        <div class="barra-progresso">
+            <span class="barra-label">Meta Diária</span>
+            <div class="barra-track">
+                <div class="barra-fill" style="width: 75%"></div>
+            </div>
+            <span class="barra-valor">75%</span>
+        </div>
+
+        <!-- Cards de Indicadores principais -->
+        <section class="cards-row">
+            <div class="card">
+                <span class="card-label">PPH</span>
+                <span class="card-value" id="pph">48</span>
+                <span class="card-subtitle">Peças/hora</span>
+            </div>
+            <div class="card">
+                <span class="card-label">TEMPO MÉDIO</span>
+                <span class="card-value" id="tempoMedio">12:30</span>
+                <span class="card-subtitle">Por caixa</span>
+            </div>
+            <div class="card">
+                <span class="card-label">STREAK</span>
+                <span class="card-value" id="streak">10</span>
+                <span class="card-subtitle">Sequência</span>
+            </div>
+            <div class="card">
+                <span class="card-label">TAXA ACERTO</span>
+                <span class="card-value" id="taxaAcertos">98%</span>
+                <span class="card-subtitle">Acertos/Total</span>
+            </div>
+        </section>
+
+        <!-- Segunda linha de indicadores -->
+        <section class="cards-row">
+            <div class="card card-dark">
+                <span class="card-label">CAIXAS HOJE</span>
+                <span class="card-value" id="caixasHoje">12</span>
+                <span class="card-subtitle">Finalizadas</span>
+            </div>
+            <div class="card card-dark">
+                <span class="card-label">TEMPO TOTAL</span>
+                <span class="card-value" id="tempoTotal">2:45:30</span>
+                <span class="card-subtitle">Trabalhado</span>
+            </div>
+            <div class="card card-dark">
+                <span class="card-label">ERROS</span>
+                <span class="card-value" id="erros">2</span>
+                <span class="card-subtitle">Bipagens</span>
+            </div>
+            <div class="card card-dark">
+                <span class="card-label">PEÇAS PICKADAS</span>
+                <span class="card-value" id="pecasPickadas">156</span>
+                <span class="card-subtitle">Hoje</span>
+            </div>
+        </section>
+
+        <!-- Gráfico e Ranking lado a lado -->
+        <div class="charts-row">
+            <!-- Gráfico de PPH por Turno -->
+            <section class="section chart-section">
+                <h2>PPH - Peças por Turno</h2>
+                <div class="grafico-container">
+                    <div class="grafico-barras" id="graficoPPH">
+                        <div class="barra-group" data-pph="45">
+                            <div class="barra barra-manha">
+                                <div class="barra-shine"></div>
+                                <div class="barra-glow"></div>
+                            </div>
+                            <span class="barra-label">Manhã</span>
+                            <span class="barra-value">45</span>
+                        </div>
+                        <div class="barra-group" data-pph="52">
+                            <div class="barra barra-tarde">
+                                <div class="barra-shine"></div>
+                                <div class="barra-glow"></div>
+                            </div>
+                            <span class="barra-label">Tarde</span>
+                            <span class="barra-value">52</span>
+                        </div>
+                        <div class="barra-group" data-pph="38">
+                            <div class="barra barra-noite">
+                                <div class="barra-shine"></div>
+                                <div class="barra-glow"></div>
+                            </div>
+                            <span class="barra-label">Noite</span>
+                            <span class="barra-value">38</span>
+                        </div>
+                        <div class="barra-group" data-pph="48">
+                            <div class="barra barra-atual">
+                                <div class="barra-shine"></div>
+                                <div class="barra-glow"></div>
+                            </div>
+                            <span class="barra-label">Atual</span>
+                            <span class="barra-value">48</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Ranking PPH -->
+            <section class="section ranking-section">
+                <h2>Ranking PPH</h2>
+                <div class="ranking-container">
+                    <div class="ranking-item rank-1">
+                        <div class="rank-pos">1º</div>
+                        <div class="rank-avatar">JO</div>
+                        <span class="rank-nome">João Silva</span>
+                        <div class="rank-pph">286</div>
+                    </div>
+                    <div class="ranking-item rank-2">
+                        <div class="rank-pos">2º</div>
+                        <div class="rank-avatar">MA</div>
+                        <span class="rank-nome">Maria Alves</span>
+                        <div class="rank-pph">248</div>
+                    </div>
+                    <div class="ranking-item rank-3">
+                        <div class="rank-pos">3º</div>
+                        <div class="rank-avatar">PE</div>
+                        <span class="rank-nome">Pedro Costa</span>
+                        <div class="rank-pph">198</div>
+                    </div>
+                    <div class="ranking-item rank-4">
+                        <div class="rank-pos">4º</div>
+                        <div class="rank-avatar">CA</div>
+                        <span class="rank-nome">Carlos Santos</span>
+                        <div class="rank-pph">176</div>
+                    </div>
+                    <div class="ranking-item rank-5">
+                        <div class="rank-pos">5º</div>
+                        <div class="rank-avatar">LU</div>
+                        <span class="rank-nome">Lucas Lima</span>
+                        <div class="rank-pph">155</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Operador em destaque -->
+        <div class="operador-destaque">
+            <div class="destaque-avatar">JO</div>
+            <div class="destaque-info">
+                <span class="destaque-nome">João Silva</span>
+                <span class="destaque-status">● Em atividade</span>
+            </div>
+            <div class="destaque-stats">
+                <div class="destaque-stat">
+                    <span class="destaque-stat-value">52</span>
+                    <span class="destaque-stat-label">PPH</span>
+                </div>
+                <div class="destaque-stat">
+                    <span class="destaque-stat-value">12</span>
+                    <span class="destaque-stat-label">Streak</span>
+                </div>
+                <div class="destaque-stat">
+                    <span class="destaque-stat-value">8</span>
+                    <span class="destaque-stat-label">Caixas</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Últimas caixas -->
+        <section class="section">
+            <h2>Últimas Caixas</h2>
+            <div class="lista-ultimas">
+                <div class="lista-item">
+                    <span class="item-box">📦</span>
+                    <div class="item-info">
+                        <span class="item-pedido">#78912340</span>
+                        <span class="item-pecas">10 peças</span>
+                    </div>
+                    <span class="item-status status-ok">✓</span>
+                </div>
+                <div class="lista-item">
+                    <span class="item-box">📦</span>
+                    <div class="item-info">
+                        <span class="item-pedido">#78912339</span>
+                        <span class="item-pecas">8 peças</span>
+                    </div>
+                    <span class="item-status status-ok">✓</span>
+                </div>
+                <div class="lista-item">
+                    <span class="item-box">📦</span>
+                    <div class="item-info">
+                        <span class="item-pedido">#78912338</span>
+                        <span class="item-pecas">15 peças</span>
+                    </div>
+                    <span class="item-status status-parcial">⚠</span>
+                </div>
+                <div class="lista-item">
+                    <span class="item-box">📦</span>
+                    <div class="item-info">
+                        <span class="item-pedido">#78912337</span>
+                        <span class="item-pecas">12 peças</span>
+                    </div>
+                    <span class="item-status status-ok">✓</span>
+                </div>
+                <div class="lista-item">
+                    <span class="item-box">📦</span>
+                    <div class="item-info">
+                        <span class="item-pedido">#78912336</span>
+                        <span class="item-pecas">6 peças</span>
+                    </div>
+                    <span class="item-status status-ok">✓</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Operadores em atividade -->
+        <section class="section">
+            <h2>Operadores em Atividade</h2>
+            <div class="operadores-grid">
+                <div class="operador-card">
+                    <div class="operador-avatar">JO</div>
+                    <div class="operador-info">
+                        <span class="operador-nome">João Silva</span>
+                        <span class="operador-meta">
+                            <span class="meta-pph">PPH: 52</span>
+                            <span class="meta-streak">🔥 12</span>
+                        </span>
+                    </div>
+                    <span class="operador-status ativo">●</span>
+                </div>
+                <div class="operador-card">
+                    <div class="operador-avatar">MA</div>
+                    <div class="operador-info">
+                        <span class="operador-nome">Maria Alves</span>
+                        <span class="operador-meta">
+                            <span class="meta-pph">PPH: 45</span>
+                            <span class="meta-streak">🔥 8</span>
+                        </span>
+                    </div>
+                    <span class="operador-status ativo">●</span>
+                </div>
+                <div class="operador-card">
+                    <div class="operador-avatar">PE</div>
+                    <div class="operador-info">
+                        <span class="operador-nome">Pedro Costa</span>
+                        <span class="operador-meta">
+                            <span class="meta-pph">PPH: 38</span>
+                            <span class="meta-streak">🔥 5</span>
+                        </span>
+                    </div>
+                    <span class="operador-status ativo">●</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../../script.js"></script>
+
+</body>
+</html>

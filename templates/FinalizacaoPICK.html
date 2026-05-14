@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MES • PICKING</title>
+    <link rel="icon" href="../KYLY_logo.png">
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="pnl-pick pnl-step-5">
+
+    <div class="mobile-wrapper">
+    <!-- Tela de finalização - resumo do picking e acesso à próxima caixa -->
+    <header>
+        <a href="javascript:history.back()" class="btn-voltar">&#8592;</a>
+        <div class="header-content">
+            <span class="header-icon">📦</span>
+            <h1>MES • PICKING</h1>
+            <span class="header-progress">10/10</span>
+        </div>
+    </header>
+
+    <main class="centro">
+        <div class="check-icon">✔</div>
+        <h2 id="statusTexto">CAIXA FINALIZADA</h2>
+        <span class="passo-label" id="pedido-info">PEDIDO #78912340 • 10 peças</span>
+        <div class="indicadores-finais">
+            <div class="indicador-card">
+                <span class="item-label">PPH</span>
+                <span class="item-value" id="pph-final">48</span>
+            </div>
+            <div class="indicador-card">
+                <span class="item-label">TEMPO</span>
+                <span class="item-value" id="tempo-final">15:42</span>
+            </div>
+            <div class="indicador-card">
+                <span class="item-label">STREAK</span>
+                <span class="item-value" id="streak-final">10</span>
+            </div>
+            <div class="indicador-card">
+                <span class="item-label">TAXA ACERTOS</span>
+                <span class="item-value" id="acertos-final">98%</span>
+            </div>
+            <div class="indicador-card">
+                <span class="item-label">CAIXAS HOJE</span>
+                <span class="item-value" id="caixas-final">12</span>
+            </div>
+            <div class="indicador-card">
+                <span class="item-label">TEMPO TOTAL</span>
+                <span class="item-value" id="tempo-total-final">2:45:30</span>
+            </div>
+        </div>
+        <button class="btn-confirmar" onclick="proximaCaixa()">PRÓXIMA CAIXA →</button>
+    </main>
+
+    <!-- Modal de confirmação de finalização -->
+    <div id="modal-sucesso" class="modal-sucesso">
+        <div class="modal-conteudo">
+            <div class="modal-icone">✅</div>
+            <h2>Caixa Finalizada!</h2>
+            <p>Picking concluído com sucesso.</p>
+            <button class="btn-ok" onclick="fecharModalSucesso()">Ok</button>
+        </div>
+    </div>
+
+    <script src="../../script.js"></script>
+
+    </div>
+
+</body>
+</html>

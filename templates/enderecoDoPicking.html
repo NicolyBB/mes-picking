@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MES • PICKING</title>
+    <link rel="icon" href="../KYLY_logo.png">
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="pnl-pick pnl-step-4">
+
+    <div class="mobile-wrapper">
+    <!-- Picking - bip de peças no endereço correto -->
+    <header>
+        <a href="javascript:history.back()" class="btn-voltar">&#8592;</a>
+        <div class="header-content">
+            <span class="header-icon">📦</span>
+            <h1>MES • PICKING</h1>
+            <span class="header-progress">3/10</span>
+        </div>
+    </header>
+
+    <div class="indicadores-container">
+        <div class="barra-unica">
+            <div class="barra-fill" style="width: 30%"></div>
+        </div>
+        <div class="indicadores">
+            <div class="indicador-card">
+                <div class="indicador">
+                    <span class="ind-label">PPH</span>
+                    <span class="ind-value">45</span>
+                </div>
+            </div>
+            <div class="indicador-card">
+                <div class="indicador">
+                    <span class="ind-label">TEMPO</span>
+                    <span class="ind-value">12:30</span>
+                </div>
+            </div>
+            <div class="indicador-card">
+                <div class="indicador">
+                    <span class="ind-label">STREAK</span>
+                    <span class="ind-value">8</span>
+                </div>
+            </div>
+            <div class="indicador-card">
+                <div class="indicador">
+                    <span class="ind-label">ERROS</span>
+                    <span class="ind-value" data-erros>2</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="centro">
+        <span class="passo-label">ENDEREÇO DE PICKING</span>
+        <h2 id="enderecoAtual">A02.01.4A</h2>
+        <div class="lista-azul">
+            <div class="lista-item stack-item">
+                <span class="item-label">Ref</span>
+                <span class="item-value">78912340</span>
+            </div>
+            <div class="lista-item stack-item">
+                <span class="item-label">Cor</span>
+                <span class="item-value">Azul</span>
+            </div>
+            <div class="lista-item stack-item">
+                <span class="item-label">Tam</span>
+                <span class="item-value">M</span>
+            </div>
+        </div>
+        <input type="text" id="codigoEndereco" class="campo-texto" placeholder="Aguardando bip da peça...">
+    </main>
+
+    <!-- Botões de ação para situações especiais -->
+    <div class="botoes-acao">
+        <button class="btn-pular">
+            <span class="btn-icone">⏭</span>
+            <span class="btn-texto">Pular SKU</span>
+        </button>
+        <button class="btn-danificada">
+            <span class="btn-icone">⚠</span>
+            <span class="btn-texto">Danificada</span>
+        </button>
+        <button class="btn-parcial" onclick="mostrarModalParcial()">
+            <span class="btn-icone">📦</span>
+            <span class="btn-texto">Parcial</span>
+        </button>
+    </div>
+
+    <!-- Modal de erro quando bipa código incorreto -->
+    <div id="modal-erro" class="modal-erro">
+        <div class="modal-conteudo">
+            <div class="modal-icone">⚠</div>
+            <h2>Erro de bipagem</h2>
+            <p>SKU não pertence à caixa</p>
+            <p class="modal-codigo">Código: <span id="codigo-erro"></span></p>
+            <button class="btn-ok" onclick="fecharModal()">Ok - Continuar</button>
+        </div>
+    </div>
+
+    <!-- Modal de confirmação para marcação parcial -->
+    <div id="modal-parcial" class="modal-parcial">
+        <div class="modal-conteudo">
+            <div class="modal-icone">📦</div>
+            <h2>Salvar como PARCIAL?</h2>
+            <p class="modal-desc">A caixa será marcada com status <strong>PARCIAL</strong>.</p>
+            <p class="modal-desc">Use em casos de interrupção multi-andar ou desabastecimento.</p>
+            <div class="modal-botoes">
+                <button class="btn-cancelar" onclick="fecharModalParcial()">Cancelar</button>
+                <button class="btn-confirmar-parcial" onclick="confirmarParcial()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../script.js"></script>
+
+    </div>
+
+</body>
+</html>

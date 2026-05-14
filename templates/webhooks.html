@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhooks • Dashboard MES</title>
+    <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="dashboard-mes">
+
+    <header>
+        <div class="header-left">
+            <div class="logo-container">
+                <span class="logo-text">MES</span>
+                <span class="logo-subtitle">PICKING</span>
+            </div>
+            <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="kyly-logo">
+        </div>
+        <div class="header-right">
+            <button class="theme-toggle" id="themeToggle" title="Alternar tema">
+                <span class="theme-icon">🌙</span>
+            </button>
+            <span class="data-atual" id="dataAtual"></span>
+        </div>
+    </header>
+
+    <nav class="nav-menu">
+        <a href="../index/index.html" class="nav-item">KPIs Tempo Real</a>
+        <a href="../importacao/importacao.html" class="nav-item">Importação</a>
+        <a href="../aging-stock/aging-stock.html" class="nav-item">Aging Stock</a>
+        <a href="../funcionarios/funcionarios.html" class="nav-item">Funcionários</a>
+        <a href="../gerir-kpis/gerir-kpis.html" class="nav-item">Gerir KPIs</a>
+        <a href="#" class="nav-item active">Webhooks</a>
+    </nav>
+
+    <main class="dashboard">
+        <section class="section">
+            <h2>🔗 Webhooks Configurados</h2>
+            <div class="webhooks-list">
+                <div class="webhook-item">
+                    <div class="webhook-icon">📤</div>
+                    <div class="webhook-info">
+                        <span class="webhook-name">Notificação de caixa finalizada</span>
+                        <span class="webhook-url">https://api.exemplo.com/webhook/caixa</span>
+                    </div>
+                    <span class="webhook-status active">● Ativo</span>
+                </div>
+                <div class="webhook-item">
+                    <div class="webhook-icon">⚠️</div>
+                    <div class="webhook-info">
+                        <span class="webhook-name">Alerta de erro de picking</span>
+                        <span class="webhook-url">https://api.exemplo.com/webhook/erro</span>
+                    </div>
+                    <span class="webhook-status active">● Ativo</span>
+                </div>
+                <div class="webhook-item">
+                    <div class="webhook-icon">📊</div>
+                    <div class="webhook-info">
+                        <span class="webhook-name">Envio diário de métricas</span>
+                        <span class="webhook-url">https://api.exemplo.com/webhook/metricas</span>
+                    </div>
+                    <span class="webhook-status inactive">● Inativo</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>📝 Registrar Novo Webhook</h2>
+            <div class="webhook-form">
+                <div class="form-group">
+                    <label>Nome do Webhook</label>
+                    <input type="text" placeholder="Ex: Notificação de meta batida" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>URL do Endpoint</label>
+                    <input type="url" placeholder="https://api.exemplo.com/webhook" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Evento</label>
+                    <select class="form-input">
+                        <option>Caixa finalizada</option>
+                        <option>Erro de picking</option>
+                        <option>Meta diária batida</option>
+                        <option>Operador chegou/exitiu</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary">➕ Adicionar Webhook</button>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>📋 Logs de Webhooks</h2>
+            <div class="logs-list">
+                <div class="log-item">
+                    <span class="log-datetime">08/05 14:32:15</span>
+                    <span class="log-event">Caixa #78912340 finalizada</span>
+                    <span class="log-status success">200 OK</span>
+                </div>
+                <div class="log-item">
+                    <span class="log-datetime">08/05 14:28:03</span>
+                    <span class="log-event">Alerta: Erro no SKU-55443</span>
+                    <span class="log-status success">200 OK</span>
+                </div>
+                <div class="log-item">
+                    <span class="log-datetime">08/05 12:00:00</span>
+                    <span class="log-event">Envio diário de métricas</span>
+                    <span class="log-status error">500 ERR</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../../script.js"></script>
+
+</body>
+</html>

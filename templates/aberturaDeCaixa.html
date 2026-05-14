@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MES • PICKING</title>
+    <link rel="icon" href="../KYLY_logo.png">
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="pnl-pick pnl-step-3">
+
+    <div class="mobile-wrapper">
+    <!-- Abertura de caixa - bip da papeleta -->
+    <header>
+        <a href="javascript:history.back()" class="btn-voltar">&#8592;</a>
+        <h1>MES • PICKING</h1>
+    </header>
+
+    <main class="centro">
+        <span class="passo-label">ABERTURA DE CAIXA</span>
+        <h2>Bipe a Papeleta</h2>
+        <input type="text" id="codigoPapeleta" class="campo-texto" placeholder="Ex: 06772401 ">
+        <div class="lista-azul">
+            <div class="lista-item cliente-item">
+                <span class="item-label">Cliente</span>
+                <span class="item-value">MAGAZINE</span>
+            </div>
+            <div class="lista-item row-item">
+                <div class="row-left">
+                    <span class="item-label">Caixa</span>
+                    <span class="item-value">001</span>
+                </div>
+                <div class="row-right">
+                    <span class="item-label">Peso Bruto</span>
+                    <span class="item-value">12,5<span class="kg">kg</span></span>
+                </div>
+            </div>
+            <div class="lista-item stack-item">
+                <span class="item-label">Pedido</span>
+                <span class="item-value">06772401</span>
+            </div>
+            <div class="lista-item stack-item">
+                <span class="item-label">Total de peças</span>
+                <span class="item-value">24</span>
+            </div>
+        </div>
+        <button class="btn-confirmar" onclick="verificarPapeleta()">Confirmar</button>
+    </main>
+
+    <script src="../../script.js"></script>
+
+    </div>
+
+</body>
+</html>

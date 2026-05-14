@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Funcionários • Dashboard MES</title>
+    <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
+    <link rel="stylesheet" href="../../style.css">
+</head>
+<body class="dashboard-mes">
+
+    <header>
+        <div class="header-left">
+            <div class="logo-container">
+                <span class="logo-text">MES</span>
+                <span class="logo-subtitle">PICKING</span>
+            </div>
+            <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="kyly-logo">
+        </div>
+        <div class="header-right">
+            <button class="theme-toggle" id="themeToggle" title="Alternar tema">
+                <span class="theme-icon">🌙</span>
+            </button>
+            <span class="data-atual" id="dataAtual"></span>
+        </div>
+    </header>
+
+    <nav class="nav-menu">
+        <a href="../index/index.html" class="nav-item">KPIs Tempo Real</a>
+        <a href="../importacao/importacao.html" class="nav-item">Importação</a>
+        <a href="../aging-stock/aging-stock.html" class="nav-item">Aging Stock</a>
+        <a href="#" class="nav-item active">Funcionários</a>
+        <a href="../gerir-kpis/gerir-kpis.html" class="nav-item">Gerir KPIs</a>
+        <a href="#" class="nav-item">Webhooks</a>
+    </nav>
+
+    <main class="dashboard">
+        <section class="section">
+            <h2>👥 Equipe de Operadores</h2>
+            <div class="funcionarios-grid">
+                <div class="funcionario-card">
+                    <div class="func-avatar">JO</div>
+                    <div class="func-info">
+                        <span class="func-nome">João Silva</span>
+                        <span class="func-setor">Picking A</span>
+                    </div>
+                    <div class="func-status online">●</div>
+                </div>
+                <div class="funcionario-card">
+                    <div class="func-avatar">MA</div>
+                    <div class="func-info">
+                        <span class="func-nome">Maria Alves</span>
+                        <span class="func-setor">Picking A</span>
+                    </div>
+                    <div class="func-status online">●</div>
+                </div>
+                <div class="funcionario-card">
+                    <div class="func-avatar">PE</div>
+                    <div class="func-info">
+                        <span class="func-nome">Pedro Costa</span>
+                        <span class="func-setor">Picking B</span>
+                    </div>
+                    <div class="func-status online">●</div>
+                </div>
+                <div class="funcionario-card">
+                    <div class="func-avatar">CA</div>
+                    <div class="func-info">
+                        <span class="func-nome">Carlos Santos</span>
+                        <span class="func-setor">Picking B</span>
+                    </div>
+                    <div class="func-status away">●</div>
+                </div>
+                <div class="funcionario-card">
+                    <div class="func-avatar">LU</div>
+                    <div class="func-info">
+                        <span class="func-nome">Lucas Lima</span>
+                        <span class="func-setor">Picking C</span>
+                    </div>
+                    <div class="func-status online">●</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2>📋 Estatísticas da Equipe</h2>
+            <div class="cards-row">
+                <div class="card">
+                    <span class="card-label">TOTAL</span>
+                    <span class="card-value">12</span>
+                    <span class="card-subtitle">Funcionários</span>
+                </div>
+                <div class="card card-dark">
+                    <span class="card-label">ONLINE</span>
+                    <span class="card-value">9</span>
+                    <span class="card-subtitle">Em atividade</span>
+                </div>
+                <div class="card card-dark">
+                    <span class="card-label">PPH MÉDIO</span>
+                    <span class="card-value">42</span>
+                    <span class="card-subtitle">Equipe</span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="../../script.js"></script>
+
+</body>
+</html>
