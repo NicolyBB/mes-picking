@@ -1,26 +1,39 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MES PICKING</title>
-    <link rel="icon" href="../KYLY_logo.png">
-    <link rel="stylesheet" href="../../style.css">
+    <title>MES PICKING - Abertura de Caixa</title>
+    
+    <!-- Ícone e CSS gerenciados pelo motor do Django -->
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    <!-- Biblioteca Oficial da Indústria para ler QR/Barcode pela Câmera do Celular -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body class="pnl-pick pnl-step-3">
     <div class="mobile-wrapper">
         <header>
-            <a href="javascript:history.back()" class="btn-voltar">&#8592;</a>
+            <!-- Seta de voltar conectada à rota dinâmica do Django -->
+            <a href="{% url 'login_colaborador' %}" class="btn-voltar">&#8592;</a>
             <h1>MES PICKING</h1>
         </header>
         <main class="centro">
             <span class="passo-label">ABERTURA DE CAIXA</span>
             <h2>Bipe a Papeleta</h2>
-            <input type="text" id="codigoPapeleta" class="campo-texto" placeholder="Ex: 06772401">
+            
+            <!-- INPUT OCULTO / AUTOFOCUS: O Laser do Datalogic "digitará" o código aqui sozinho -->
+            <input type="text" id="codigoPapeleta" class="campo-texto" placeholder="Ex: 06772401" autofocus autocomplete="off" style="text-align: center;">
+            
+            <!-- STATUS DE COMUNICAÇÃO: Feedback AJAX visual -->
+            <div id="status-comunicacao" style="margin-top: 10px; font-weight: bold; height: 20px; color: #d4af11;"></div>
+
             <div class="lista-azul">
                 <div class="lista-item cliente-item">
                     <span class="item-label">Cliente</span>
-                    <span class="item-value">MAGAZINE</span>
+                    <span class="item-value">MAGAZINE MIDORI LTDA</span>
                 </div>
                 <div class="lista-item row-item">
                     <div class="row-left">
@@ -29,21 +42,49 @@
                     </div>
                     <div class="row-right">
                         <span class="item-label">Peso Bruto</span>
-                        <span class="item-value">12,5<span class="kg">kg</span></span>
+                        <span class="item-value">13,818<span class="kg">kg</span></span>
                     </div>
                 </div>
                 <div class="lista-item stack-item">
                     <span class="item-label">Pedido</span>
-                    <span class="item-value">06772401</span>
+                    <span class="item-value">2657808</span>
                 </div>
                 <div class="lista-item stack-item">
                     <span class="item-label">Total de peças</span>
-                    <span class="item-value">24</span>
+                    <span class="item-value">87 un</span>
                 </div>
             </div>
-            <button class="btn-confirmar" onclick="verificarPapeleta()">Confirmar</button>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; width: 100%; margin-top: 20px;">
+                <!-- BOTÃO DA CÂMERA REAL -->
+                <button onclick="iniciarScannerCamera('codigoPapeleta')" class="btn-confirmar" style="background: #003366; color: #d4af11; border: 2px solid #d4af11;">
+                    📷 Ler com Câmera Real
+                </button>
+                
+                <!-- BOTÃO CONFIRMAR (DJANGO): Avança para a tela principal de picking -->
+                <button onclick="window.location.href='{% url 'tela_picking' %}'" class="btn-confirmar">
+                    Confirmar / Iniciar Picking
+                </button>
+            </div>
         </main>
-        <script src="../../script.js"></script>
+        
+        <!-- JavaScript padronizado do projeto -->
+        <script src="{% static 'js/script.js' %}"></script>
+    </div>
+
+    <!-- MODAL DO SCANNER DE CÂMERA -->
+    <div id="scanner-modal" class="modal-erro" style="display: none; flex-direction: column; background-color: rgba(11, 18, 32, 0.95);">
+        <div class="modal-conteudo" style="background: #0f1a2e; border: 2px solid #d4af11; max-width: 350px;">
+            <h2 style="color: #d4af11; font-size: 22px;">Câmera Ativada</h2>
+            <p style="font-size: 14px; color: #ccc;">Aponte para a papeleta da caixa</p>
+            
+            <!-- O vídeo da câmera será injetado nesta div pelo script.js -->
+            <div id="reader" style="width: 100%; min-height: 250px; background: #000; margin-bottom: 20px; border-radius: 8px; overflow: hidden;"></div>
+            
+            <button onclick="fecharScannerCamera()" class="btn-cancelar" style="width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                Cancelar
+            </button>
+        </div>
     </div>
 </body>
 </html>

@@ -1,11 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard MES PICKING</title>
-    <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
-    <link rel="stylesheet" href="../../style.css">
+    <title>Dashboard MES PICKING - KPIs Tempo Real</title>
+    
+    <!-- Ícone e CSS gerenciados pelo motor do Django -->
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="dashboard-mes">
     <header>
@@ -14,23 +17,25 @@
                 <span class="logo-text">MES</span>
                 <span class="logo-subtitle">PICKING</span>
             </div>
-            <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="kyly-logo">
+            <!-- Imagem padronizada com a tag estática do Django -->
+            <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="kyly-logo">
         </div>
         <div class="header-right">
             <button class="theme-toggle" id="themeToggle" title="Alternar tema">
-                <span class="theme-icon"></span>
+                <span class="theme-icon">🌙</span>
             </button>
             <span class="data-atual" id="dataAtual"></span>
         </div>
     </header>
     
+    <!-- Menu de Navegação 100% Dinâmico com Rotas Django -->
     <nav class="nav-menu">
-        <a href="../index/index.html" class="nav-item active">KPIs Tempo Real</a>
-        <a href="../importacao/importacao.html" class="nav-item">Importação</a>
-        <a href="../aging-stock/aging-stock.html" class="nav-item">Aging Stock</a>
-        <a href="../funcionarios/funcionarios.html" class="nav-item">Funcionários</a>
-        <a href="../gerir-kpis/gerir-kpis.html" class="nav-item">Gerir KPIs</a>
-        <a href="../webhooks/webhooks.html" class="nav-item">Webhooks</a>
+        <a href="{% url 'dashboard_kpis' %}" class="nav-item active">KPIs Tempo Real</a>
+        <a href="{% url 'api_importar_excel' %}" class="nav-item">Importação</a>
+        <a href="{% url 'aging_stock' %}" class="nav-item">Aging Stock</a>
+        <a href="{% url 'dashboard_funcionarios' %}" class="nav-item">Funcionários</a>
+        <a href="{% url 'dashboard_gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
+        <a href="{% url 'dashboard_webhooks' %}" class="nav-item">Webhooks</a>
     </nav>
 
     <main class="dashboard">
@@ -42,43 +47,65 @@
             <span class="barra-valor">75%</span>
         </div>
 
+        <!-- KPIs de Agilidade -->
         <section class="cards-row">
-            <div class="card"><span class="card-label">PPH</span><span class="card-value" id="pph">48</span><span class="card-subtitle">Peças/hora</span></div>
-            <div class="card"><span class="card-label">TEMPO MÉDIO</span><span class="card-value" id="tempoMedio">12:30</span><span class="card-subtitle">Por caixa</span></div>
+            <div class="card"><span class="card-label">PPH</span><span class="card-value" id="pph">142</span><span class="card-subtitle">Peças/hora</span></div>
+            <div class="card"><span class="card-label">TEMPO MÉDIO</span><span class="card-value" id="tempoMedio">11:40</span><span class="card-subtitle">Por caixa</span></div>
             <div class="card"><span class="card-label">STREAK</span><span class="card-value" id="streak">10</span><span class="card-subtitle">Sequência</span></div>
-            <div class="card"><span class="card-label">TAXA ACERTO</span><span class="card-value" id="taxaAcertos">98%</span><span class="card-subtitle">Acertos/Total</span></div>
+            <div class="card"><span class="card-label">TAXA ACERTO</span><span class="card-value" id="taxaAcertos">99.2%</span><span class="card-subtitle">Acertos/Total</span></div>
         </section>
 
+        <!-- KPIs de Volume -->
         <section class="cards-row">
-            <div class="card card-dark"><span class="card-label">CAIXAS HOJE</span><span class="card-value" id="caixasHoje">12</span><span class="card-subtitle">Finalizadas</span></div>
+            <div class="card card-dark"><span class="card-label">CAIXAS HOJE</span><span class="card-value" id="caixasHoje">287</span><span class="card-subtitle">Finalizadas</span></div>
             <div class="card card-dark"><span class="card-label">TEMPO TOTAL</span><span class="card-value" id="tempoTotal">2:45:30</span><span class="card-subtitle">Trabalhado</span></div>
-            <div class="card card-dark"><span class="card-label">ERROS</span><span class="card-value" id="erros">2</span><span class="card-subtitle">Bipagens</span></div>
-            <div class="card card-dark"><span class="card-label">PEÇAS PICKADAS</span><span class="card-value" id="pecasPickadas">156</span><span class="card-subtitle">Hoje</span></div>
+            <div class="card card-dark"><span class="card-label">ERROS</span><span class="card-value" id="erros">4</span><span class="card-subtitle">Bipagens</span></div>
+            <div class="card card-dark"><span class="card-label">PEÇAS PICKADAS</span><span class="card-value" id="pecasPickadas">4.120</span><span class="card-subtitle">Hoje</span></div>
         </section>
 
         <div class="charts-row">
+            <!-- Gráfico de Barras que estava cortado no seu HTML -->
             <section class="section chart-section">
                 <h2>PPH - Peças por Turno</h2>
                 <div class="grafico-container">
                     <div class="grafico-barras" id="graficoPPH">
-                        <div class="barra-group" data-pph="45"><div class="barra barra-manha"></div><span class="barra-label">Manhã</span><span class="barra-value">45</span></div>
-                        <div class="barra-group" data-pph="52"><div class="barra barra-tarde"></div><span class="barra-label">Tarde</span><span class="barra-value">52</span></div>
-                        <div class="barra-group" data-pph="38"><div class="barra barra-noite"></div><span class="barra-label">Noite</span><span class="barra-value">38</span></div>
-                        <div class="barra-group" data-pph="48"><div class="barra barra-atual"></div><span class="barra-label">Atual</span><span class="barra-value">48</span></div>
+                        <div class="barra-group" data-pph="120"><div class="barra barra-manha" style="height: 70%;"></div><span class="barra-label">Manhã</span><span class="barra-value">120</span></div>
+                        <div class="barra-group" data-pph="110"><div class="barra barra-tarde" style="height: 60%;"></div><span class="barra-label">Tarde</span><span class="barra-value">110</span></div>
+                        <div class="barra-group" data-pph="95"><div class="barra barra-noite" style="height: 50%;"></div><span class="barra-label">Noite</span><span class="barra-value">95</span></div>
+                        <!-- Turno Atual com a classe de animação pulse-glow -->
+                        <div class="barra-group" data-pph="142"><div class="barra barra-atual" style="height: 85%;"></div><span class="barra-label">Atual</span><span class="barra-value">142</span></div>
                     </div>
                 </div>
             </section>
 
-            <section class="section ranking-section">
-                <h2>Ranking PPH</h2>
+            <!-- Ranking de Operadores (Gamificação) -->
+            <section class="section">
+                <h2>Top Operadores</h2>
                 <div class="ranking-container">
-                    <div class="ranking-item rank-1"><div class="rank-pos">1°</div><div class="rank-avatar">JO</div><span class="rank-nome">João Silva</span><div class="rank-pph">286</div></div>
-                    <div class="ranking-item rank-2"><div class="rank-pos">2°</div><div class="rank-avatar">MA</div><span class="rank-nome">Maria Alves</span><div class="rank-pph">248</div></div>
-                    <div class="ranking-item rank-3"><div class="rank-pos">3°</div><div class="rank-avatar">PE</div><span class="rank-nome">Pedro Costa</span><div class="rank-pph">198</div></div>
+                    <div class="ranking-item rank-1">
+                        <span class="rank-pos">1º</span>
+                        <div class="rank-avatar">RC</div>
+                        <span class="rank-nome">Renata Cruz</span>
+                        <span class="rank-pph">156 PPH</span>
+                    </div>
+                    <div class="ranking-item rank-2">
+                        <span class="rank-pos">2º</span>
+                        <div class="rank-avatar">CM</div>
+                        <span class="rank-nome">Carla Mendes</span>
+                        <span class="rank-pph">142 PPH</span>
+                    </div>
+                    <div class="ranking-item rank-3">
+                        <span class="rank-pos">3º</span>
+                        <div class="rank-avatar">BL</div>
+                        <span class="rank-nome">Bruno Lima</span>
+                        <span class="rank-pph">128 PPH</span>
+                    </div>
                 </div>
             </section>
         </div>
     </main>
-    <script src="../../script.js"></script>
+
+    <!-- JavaScript padronizado -->
+    <script src="{% static 'js/script.js' %}"></script>
 </body>
 </html>

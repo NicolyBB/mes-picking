@@ -82,9 +82,16 @@ WSGI_APPLICATION = "core.wsgi.application"
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'mes_picking_kyly', # O nome exato que criamos no Passo 2
+        'USER': 'root', # Coloque o seu usuário do MySQL da VM
+        'PASSWORD': 'sE2nh0$%Aq7&', # Coloque a senha do seu MySQL da VM
+        'HOST': 'localhost',
+        'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        }
     }
 }
 

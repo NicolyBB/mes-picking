@@ -1,19 +1,26 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Operações SUPERVISOR KYLY MES</title>
-    <link rel="stylesheet" href="../../style.css">
+    
+    <!-- Ícone e CSS gerenciados pelo motor do Django -->
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="supervisor-mes">
     <header class="page-header">
         <div class="header-main">
             <div class="brand-area">
-                <button class="back-button" id="backButton" type="button" aria-label="Voltar">
-                    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-7-7 7 7 7"/></svg>
+                <!-- Botão voltar conectado à rota dinâmica do Django -->
+                <button class="back-button" id="backButton" onclick="window.location.href='{% url 'login_supervisor' %}'" type="button" aria-label="Voltar">
+                    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M19 12H5m6-7-7 7 7 7"/>
+                    </svg>
                 </button>
-                <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="supervisor-logo">
+                <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="supervisor-logo">
                 <div class="title-group">
                     <span class="product-name">SUPERVISOR KYLY MES</span>
                     <h1>Painel de Operações</h1>
@@ -21,7 +28,7 @@
             </div>
             <div class="header-actions">
                 <button class="theme-toggle" id="themeToggle" type="button" title="Alternar tema">
-                    <span class="theme-icon"></span>
+                    <span class="theme-icon">🌙</span>
                 </button>
                 <div class="header-metrics">
                     <div class="header-metric"><span>Operadores</span><strong id="operadoresAtivos">4/6</strong></div>
@@ -31,12 +38,14 @@
             </div>
         </div>
         <nav class="tab-bar">
-            <button class="tab-button active" type="button" data-tab="equipe"><span>Equipe</span></button>
-            <button class="tab-button" type="button" data-tab="excecoes"><span>Exceções</span><span class="tab-badge" id="badgeExcecoes">3</span></button>
+            <!-- Abas de Navegação do Supervisor -->
+            <button class="tab-button active" type="button" data-tab="equipe" onclick="mudarAba('equipe')"><span>Equipe</span></button>
+            <button class="tab-button" type="button" data-tab="excecoes" onclick="mudarAba('excecoes')"><span>Exceções</span><span class="tab-badge" id="badgeExcecoes">3</span></button>
         </nav>
     </header>
 
     <main class="dashboard">
+        <!-- ABA 1: EQUIPE -->
         <section class="tab-content active" id="tab-equipe">
             <section class="metrics-grid">
                 <article class="metric-card">
@@ -60,26 +69,167 @@
                     <small class="positive">erro &lt; 1%</small>
                 </article>
             </section>
+
+            <!-- Barra de Busca -->
+            <div class="search-row">
+                <div class="search-box">
+                    <svg width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                    <input type="text" placeholder="Buscar por crachá, nome ou caixa...">
+                </div>
+            </div>
+
+            <!-- Grade de Operadores Ativos -->
+            <div class="operators-grid">
+                <article class="operator-card">
+                    <header class="operator-header">
+                        <div class="operator-left">
+                            <div class="status-dot"></div>
+                            <div>
+                                <h3 class="operator-name">Carla Mendes</h3>
+                                <div class="operator-meta">K-1042 · Corredor A02</div>
+                            </div>
+                        </div>
+                        <svg class="operator-signal" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"></path></svg>
+                    </header>
+                    <div class="operator-stats">
+                        <div class="stat-block"><span class="stat-label">PPH</span><strong class="stat-value">142</strong></div>
+                        <div class="stat-block"><span class="stat-label">CAIXA</span><strong class="stat-value">06772401</strong></div>
+                        <div class="stat-block"><span class="stat-label">SINAL</span><strong class="stat-value">agora</strong></div>
+                    </div>
+                </article>
+                
+                <article class="operator-card">
+                    <header class="operator-header">
+                        <div class="operator-left">
+                            <div class="status-dot idle"></div>
+                            <div>
+                                <h3 class="operator-name">Bruno Lima</h3>
+                                <div class="operator-meta">K-1188 · Corredor B07</div>
+                            </div>
+                        </div>
+                        <svg class="operator-signal" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"></path></svg>
+                    </header>
+                    <div class="operator-stats">
+                        <div class="stat-block"><span class="stat-label">PPH</span><strong class="stat-value">128</strong></div>
+                        <div class="stat-block"><span class="stat-label">CAIXA</span><strong class="stat-value">06772419</strong></div>
+                        <div class="stat-block"><span class="stat-label">SINAL</span><strong class="stat-value">12s</strong></div>
+                    </div>
+                </article>
+
+                <article class="operator-card">
+                    <header class="operator-header">
+                        <div class="operator-left">
+                            <div class="status-dot error"></div>
+                            <div>
+                                <h3 class="operator-name">Renata Cruz</h3>
+                                <div class="operator-meta">K-1345 · Corredor A05</div>
+                            </div>
+                        </div>
+                        <svg class="operator-signal error" viewBox="0 0 24 24"><path d="M12 2v20M17 7l-10 10M7 7l10 10"></path></svg>
+                    </header>
+                    <div class="operator-stats">
+                        <div class="stat-block"><span class="stat-label">PPH</span><strong class="stat-value">156</strong></div>
+                        <div class="stat-block"><span class="stat-label">CAIXA</span><strong class="stat-value">06772441</strong></div>
+                        <div class="stat-block"><span class="stat-label">SINAL</span><strong class="stat-value">agora</strong></div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- ABA 2: EXCEÇÕES E AUTORIZAÇÕES -->
+        <section class="tab-content" id="tab-excecoes" style="display: none;">
+            <div class="exceptions-table-card">
+                <table class="exceptions-table">
+                    <thead>
+                        <tr>
+                            <th class="exception-col-id">ID</th>
+                            <th class="exception-col-operator">Operador</th>
+                            <th class="exception-col-type">Tipo</th>
+                            <th class="exception-col-reason">Motivo</th>
+                            <th class="exception-col-action">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="exception-row">
+                            <td class="exception-id">EX-9981</td>
+                            <td class="exception-operator"><strong>Bruno Lima</strong><small>há 1 min</small></td>
+                            <td><span class="exception-type skip">Pular SKU</span></td>
+                            <td class="exception-reason">Falta de peça no endereço B07.04.2A</td>
+                            <td><button class="authorize-btn" onclick="abrirMasterCode('EX-9981')">Autorizar</button></td>
+                        </tr>
+                        <tr class="exception-row">
+                            <td class="exception-id">EX-9979</td>
+                            <td class="exception-operator"><strong>Patrícia Souza</strong><small>há 4 min</small></td>
+                            <td><span class="exception-type balance">Saldo Zero</span></td>
+                            <td class="exception-reason">Ref 1000044 sem saldo físico</td>
+                            <td><button class="authorize-btn" onclick="abrirMasterCode('EX-9979')">Autorizar</button></td>
+                        </tr>
+                        <tr class="exception-row">
+                            <td class="exception-id">EX-9975</td>
+                            <td class="exception-operator"><strong>Renata Cruz</strong><small>há 9 min</small></td>
+                            <td><span class="exception-type damage">Peça Danificada</span></td>
+                            <td class="exception-reason">Ref 1000022 — costura aberta</td>
+                            <td><button class="authorize-btn" onclick="abrirMasterCode('EX-9975')">Autorizar</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
     </main>
 
+    <!-- MODAL DE CONTINGÊNCIA (MASTER CODE) -->
     <div class="master-code-overlay" id="masterCodeOverlay" aria-hidden="true">
         <section class="master-code-modal" role="dialog" aria-modal="true" aria-labelledby="masterCodeTitle">
             <div class="master-code-heading">
+                <div class="master-code-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                </div>
                 <h2 id="masterCodeTitle">Liberação de Master Code</h2>
             </div>
-            <p class="master-code-copy">
-                Bipe seu crachá para autorizar a exceção <strong id="masterCodeExceptionId">EX-9981</strong>.
-                O supervisor_id será gravado em LOG_BIPAGEM.
-            </p>
-            <input class="master-code-input" id="masterCodeInput" type="text" autocomplete="off" placeholder="Crachá supervisor...">
+            
+            <p class="master-code-copy">Bipe seu crachá para autorizar a exceção <strong id="excecaoAlvo">EX-0000</strong>. O <code>supervisor_id</code> será gravado de forma segura na tabela <strong>LOG_BIPAGEM</strong>.</p>
+            
+            <!-- Input oculto com autofocus para garantir leitura direta via Laser no Datalogic -->
+            <input type="text" id="codigoSupervisorExcecao" class="master-code-input" placeholder="Aguardando crachá supervisor..." autofocus autocomplete="off">
+            
             <div class="master-code-actions">
-                <button class="master-code-btn cancel" id="masterCodeCancel" type="button">Cancelar</button>
-                <button class="master-code-btn confirm" id="masterCodeConfirm" type="button">Confirmar</button>
+                <button class="master-code-btn cancel" onclick="fecharMasterCode()">Cancelar</button>
+                <button class="master-code-btn confirm" onclick="confirmarMasterCode()">Confirmar</button>
             </div>
         </section>
     </div>
 
-    <script src="../../script.js"></script>
+    <!-- JavaScript padronizado do projeto -->
+    <script src="{% static 'js/script.js' %}"></script>
+    
+    <!-- Mini script para gerir as abas do Supervisor -->
+    <script>
+        function mudarAba(aba) {
+            document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + aba).style.display = 'block';
+            document.querySelector(`[data-tab="${aba}"]`).classList.add('active');
+        }
+
+        function abrirMasterCode(idExcecao) {
+            document.getElementById('masterCodeOverlay').classList.add('active');
+            document.getElementById('masterCodeOverlay').setAttribute('aria-hidden', 'false');
+            document.getElementById('excecaoAlvo').innerText = idExcecao;
+            
+            // Força o foco do laser no input do crachá do supervisor
+            setTimeout(() => document.getElementById('codigoSupervisorExcecao').focus(), 100);
+        }
+
+        function fecharMasterCode() {
+            document.getElementById('masterCodeOverlay').classList.remove('active');
+            document.getElementById('masterCodeOverlay').setAttribute('aria-hidden', 'true');
+        }
+        
+        function confirmarMasterCode() {
+            alert('Exceção Autorizada com Sucesso! (Demonstração Frontend)');
+            fecharMasterCode();
+        }
+    </script>
 </body>
 </html>

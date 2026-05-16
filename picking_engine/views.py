@@ -18,3 +18,14 @@ def finalizacao_pick(request):
 # Tela do Dashboard Comercial (Smart TVs)
 def aging_stock(request):
     return render(request, 'aging-stock.html')
+
+def tela_picking(request):
+    return render(request, 'enderecoDePicking.html') 
+
+# Tela de Encerramento
+def finalizacao_pick(request):
+    return render(request, 'FinalizacaoPICK.html')
+
+# Tela do Dashboard Comercial (Smart TVs)
+def aging_stock(request):
+    return render(request, 'aging-stock.html')

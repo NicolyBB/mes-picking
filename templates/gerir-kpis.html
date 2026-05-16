@@ -1,11 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerir KPIs Dashboard MES</title>
-    <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
-    <link rel="stylesheet" href="../../style.css">
+    <title>Dashboard MES - Gerir KPIs</title>
+    
+    <!-- Ícone e CSS gerenciados pelo motor do Django -->
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="dashboard-mes">
     <header>
@@ -14,71 +17,139 @@
                 <span class="logo-text">MES</span>
                 <span class="logo-subtitle">PICKING</span>
             </div>
-            <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="kyly-logo">
+            <!-- Imagem padronizada com a tag estática do Django -->
+            <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="kyly-logo">
         </div>
         <div class="header-right">
             <button class="theme-toggle" id="themeToggle" title="Alternar tema">
-                <span class="theme-icon"></span>
+                <span class="theme-icon">🌙</span>
             </button>
             <span class="data-atual" id="dataAtual"></span>
         </div>
     </header>
+    
+    <!-- Menu de Navegação 100% Dinâmico com Rotas Django -->
     <nav class="nav-menu">
-        <a href="../index/index.html" class="nav-item">KPIs Tempo Real</a>
-        <a href="../importacao/importacao.html" class="nav-item">Importação</a>
-        <a href="../aging-stock/aging-stock.html" class="nav-item">Aging Stock</a>
-        <a href="../funcionarios/funcionarios.html" class="nav-item">Funcionários</a>
-        <a href="#" class="nav-item active">Gerir KPIs</a>
-        <a href="../webhooks/webhooks.html" class="nav-item">Webhooks</a>
+        <a href="{% url 'dashboard_kpis' %}" class="nav-item">KPIs Tempo Real</a>
+        <a href="{% url 'api_importar_excel' %}" class="nav-item">Importação</a>
+        <a href="{% url 'aging_stock' %}" class="nav-item">Aging Stock</a>
+        <a href="{% url 'dashboard_funcionarios' %}" class="nav-item">Funcionários</a>
+        <a href="{% url 'dashboard_gerir_kpis' %}" class="nav-item active">Gerir KPIs</a>
+        <a href="{% url 'dashboard_webhooks' %}" class="nav-item">Webhooks</a>
     </nav>
+
     <main class="dashboard">
+        
+        <!-- Cabeçalho com o botão de Cadastrar Novo KPI -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <h2 style="color: var(--accent); margin: 0; text-transform: uppercase; letter-spacing: 1px;">Catálogo de KPIs Industriais</h2>
+            <button class="btn-primary" style="padding: 10px 20px; font-size: 14px; background: #28a745; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;" onclick="abrirModalKPI()">
+                + Novo KPI
+            </button>
+        </div>
+
         <section class="section">
-            <h2>Configuração de Metas</h2>
+            <h2>Configuração de Metas (Operação Kyly)</h2>
             <div class="kpi-config-grid">
+                
                 <div class="kpi-config-item">
                     <label>Meta PPH</label>
-                    <input type="number" value="65" class="kpi-input">
+                    <input type="number" value="130" class="kpi-input">
                     <span class="kpi-unit">peças/hora</span>
                 </div>
+                
                 <div class="kpi-config-item">
-                    <label>Tempo Médio Meta</label>
-                    <input type="text" value="15:00" class="kpi-input">
-                    <span class="kpi-unit">minutos</span>
+                    <label>Lead Time Meta</label>
+                    <input type="text" value="12:00" class="kpi-input">
+                    <span class="kpi-unit">minutos/caixa</span>
                 </div>
+                
                 <div class="kpi-config-item">
                     <label>Streak Mínimo</label>
                     <input type="number" value="10" class="kpi-input">
-                    <span class="kpi-unit">caixas</span>
+                    <span class="kpi-unit">caixas s/ erro</span>
                 </div>
+                
                 <div class="kpi-config-item">
-                    <label>Taxa Acerto Mínima</label>
-                    <input type="number" value="95" class="kpi-input">
-                    <span class="kpi-unit">%</span>
+                    <label>Acurácia Mínima</label>
+                    <input type="number" value="99" class="kpi-input">
+                    <span class="kpi-unit">% de acerto</span>
                 </div>
+
             </div>
-            <button class="btn btn-primary" style="margin-top: 20px;">Salvar Configurações</button>
+            <!-- Botão de Salvar Alterações -->
+            <button class="btn btn-primary" style="margin-top: 20px; background: #d4af11; color: #003366; font-weight: bold; padding: 12px 25px; border-radius: 8px; border: none; cursor: pointer;">Salvar Configurações</button>
         </section>
+
+        <!-- Relatório de Metas versus Realizado (Gera prova de ROI para a banca) -->
         <section class="section">
-            <h2>Indicadores Configurados</h2>
+            <h2>Indicadores Ativos vs Realizado (Hoje)</h2>
             <div class="kpi-list">
-                <div class="kpi-item">
-                    <span class="kpi-name">PPH</span>
-                    <span class="kpi-meta">Meta: 65 | Atual: 48</span>
-                    <span class="kpi-status warning">Abaixo</span>
+                
+                <div class="kpi-item" style="cursor: pointer;" onclick="abrirModalKPI()">
+                    <span class="kpi-name">PPH Geral</span>
+                    <span class="kpi-meta">Meta: 130 | Atual: <strong style="color: #fff;">142</strong></span>
+                    <span class="kpi-status success">SUPERADO (+8%)</span>
                 </div>
-                <div class="kpi-item">
-                    <span class="kpi-name">Tempo Médio</span>
-                    <span class="kpi-meta">Meta: 15:00 | Atual: 12:30</span>
+                
+                <div class="kpi-item" style="cursor: pointer;" onclick="abrirModalKPI()">
+                    <span class="kpi-name">Lead Time Caixa</span>
+                    <span class="kpi-meta">Meta: 12.0 min | Atual: <strong style="color: #fff;">11.4 min</strong></span>
                     <span class="kpi-status success">OK</span>
                 </div>
-                <div class="kpi-item">
-                    <span class="kpi-name">Taxa de Acerto</span>
-                    <span class="kpi-meta">Meta: 95% | Atual: 98%</span>
+                
+                <div class="kpi-item" style="cursor: pointer;" onclick="abrirModalKPI()">
+                    <span class="kpi-name">Acurácia Bipagem</span>
+                    <span class="kpi-meta">Meta: 99.0% | Atual: <strong style="color: #fff;">99.2%</strong></span>
                     <span class="kpi-status success">OK</span>
                 </div>
+
+                <div class="kpi-item" style="cursor: pointer;" onclick="abrirModalKPI()">
+                    <span class="kpi-name">Exceções Abertas</span>
+                    <span class="kpi-meta">Meta: < 5 | Atual: <strong style="color: #fff;">4</strong></span>
+                    <span class="kpi-status warning">ALERTA</span>
+                </div>
+
             </div>
         </section>
     </main>
-    <script src="../../script.js"></script>
+
+    <!-- Modal de Edição de KPI (CRUD via ADM) -->
+    <div id="modal-kpi" class="modal-parcial" style="display: none; position: fixed; inset: 0; background: rgba(11, 18, 32, 0.9); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="modal-conteudo" style="background: var(--bg-secondary); border: 1px solid var(--accent); padding: 30px; border-radius: 12px; width: 450px; text-align: left; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <h3 style="color: var(--text-primary); margin-bottom: 20px;">Editar KPI</h3>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" placeholder="Nome do KPI (ex: Lead Time)" value="Lead Time Caixa" style="flex: 1; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
+                    <input type="text" placeholder="Ícone" value="🕒" style="width: 80px; text-align: center; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
+                </div>
+                
+                <label style="color: var(--text-secondary); font-size: 12px; margin-bottom: -10px;">Fórmula / SQL (Consulta no Banco)</label>
+                <input type="text" placeholder="Fórmula (ex: AVG(close - open))" value="AVG(close - open)" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff; font-family: monospace;">
+                
+                <label style="color: var(--text-secondary); font-size: 12px; margin-bottom: -10px;">Meta Estabelecida</label>
+                <input type="text" placeholder="Meta" value="12 min" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                    <button onclick="fecharModalKPI()" style="padding: 10px 15px; background: transparent; color: #fff; border: 1px solid #fff; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                    <button onclick="fecharModalKPI()" style="padding: 10px 15px; background: #28a745; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Salvar alterações</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript padronizado do projeto -->
+    <script src="{% static 'js/script.js' %}"></script>
+    
+    <!-- Mini-script para abrir/fechar o Modal de Edição -->
+    <script>
+        function abrirModalKPI() {
+            document.getElementById('modal-kpi').style.display = 'flex';
+        }
+        function fecharModalKPI() {
+            document.getElementById('modal-kpi').style.display = 'none';
+        }
+    </script>
 </body>
 </html>

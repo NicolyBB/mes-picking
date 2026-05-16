@@ -1,25 +1,66 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MES PICKING</title>
-    <link rel="icon" href="../KYLY_logo.png">
-    <link rel="stylesheet" href="../../style.css">
+    <title>MES PICKING - Login Colaborador</title>
+    
+    <!-- Ícone e CSS gerenciados pelo motor do Django -->
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    <!-- Biblioteca Oficial da Indústria para ler QR/Barcode pela Câmera do Celular -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body class="pnl-pick pnl-step-2">
     <div class="mobile-wrapper">
         <header>
-            <a href="javascript:history.back()" class="btn-voltar">&#8592;</a>
+            <!-- Seta de voltar conectada à rota dinâmica do Django (Volta para o Supervisor) -->
+            <a href="{% url 'login_supervisor' %}" class="btn-voltar">&#8592;</a>
             <h1>MES PICKING</h1>
         </header>
+        
         <main class="centro">
             <span class="passo-label">PASSO 2/2</span>
             <h2>Bipe o crachá do COLABORADOR</h2>
-            <input type="text" id="codigoColaborador" class="campo-texto" placeholder="Aguardando leitura do laser...">
-            <button class="btn-confirmar" onclick="verificarColaborador()">Confirmar</button>
+            
+            <!-- 1. INPUT OCULTO / AUTOFOCUS: O Laser do Datalogic "digitará" o código aqui sozinho -->
+            <input type="text" id="codigoColaborador" class="campo-texto" placeholder="Aguardando leitura do laser..." autofocus autocomplete="off" style="text-align: center;">
+            
+            <!-- 2. STATUS DE COMUNICAÇÃO: Mostra "Validando..." sem recarregar a tela (AJAX) -->
+            <div id="status-comunicacao" style="margin-top: 15px; font-weight: bold; height: 20px; color: #d4af11;"></div>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; width: 100%; margin-top: 20px; padding: 0 20px;">
+                <!-- 3. BOTÃO DA CÂMERA REAL: Ativa o html5-qrcode e injeta no input 'codigoColaborador' -->
+                <button onclick="iniciarScannerCamera('codigoColaborador')" class="btn-confirmar" style="background: #003366; color: #d4af11; border: 2px solid #d4af11;">
+                    📷 Ler com Câmera Real
+                </button>
+                
+                <!-- 4. BOTÃO CONFIRMAR (DJANGO): Se der certo, avança para a Abertura de Caixa -->
+                <button onclick="window.location.href='{% url 'abertura_caixa' %}'" class="btn-confirmar">
+                    Confirmar / Simular Bip
+                </button>
+            </div>
         </main>
-        <script src="../../script.js"></script>
+        
+        <!-- JavaScript padronizado-->
+        <script src="{% static 'js/script.js' %}"></script>
+    </div>
+
+    <!-- 5. MODAL DO SCANNER DE CÂMERA (Fica invisível até o operador clicar no botão 📷) -->
+    <div id="scanner-modal" class="modal-erro" style="display: none; flex-direction: column; background-color: rgba(11, 18, 32, 0.95);">
+        <div class="modal-conteudo" style="background: #0f1a2e; border: 2px solid #d4af11; max-width: 350px;">
+            <h2 style="color: #d4af11; font-size: 22px;">Câmera Ativada</h2>
+            <p style="font-size: 14px; color: #ccc;">Aponte para o crachá do Colaborador</p>
+            
+            <!-- O vídeo da câmera será injetado nesta div pelo script.js -->
+            <div id="reader" style="width: 100%; min-height: 250px; background: #000; margin-bottom: 20px; border-radius: 8px; overflow: hidden;"></div>
+            
+            <button onclick="fecharScannerCamera()" class="btn-cancelar" style="width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                Cancelar
+            </button>
+        </div>
     </div>
 </body>
 </html>

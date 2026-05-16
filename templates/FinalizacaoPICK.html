@@ -1,27 +1,34 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MES PICKING</title>
-    <link rel="icon" href="../KYLY_logo.png">
-    <link rel="stylesheet" href="../../style.css">
+    <title>MES PICKING - Caixa Finalizada</title>
+    
+    <!-- Ícone e CSS gerenciados pelo motor do Django -->
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="pnl-pick pnl-step-5">
     <div class="mobile-wrapper">
         <header>
-            <a href="javascript:history.back()" class="btn-voltar">&#8592;</a>
+            <!-- A seta de voltar agora aponta dinamicamente para o início do processo -->
+            <a href="{% url 'abertura_caixa' %}" class="btn-voltar">&#8592;</a>
             <div class="header-content">
                 <span class="header-icon"></span>
                 <h1>MES PICKING</h1>
                 <span class="header-progress">10/10</span>
             </div>
         </header>
+        
         <main class="centro">
-            <div class="check-icon"></div>
+            <!-- Feedback Visual de Sucesso Total -->
+            <div class="check-icon">✓</div>
             <h2 id="statusTexto">CAIXA FINALIZADA</h2>
             <span class="passo-label" id="pedido-info">PEDIDO #78912340 10 peças</span>
             
+            <!-- KPIs Individuais do Operador na conclusão -->
             <div class="indicadores-finais">
                 <div class="indicador-card"><span class="item-label">PPH</span><span class="item-value" id="pph-final">48</span></div>
                 <div class="indicador-card"><span class="item-label">TEMPO</span><span class="item-value" id="tempo-final">15:42</span></div>
@@ -31,18 +38,24 @@
                 <div class="indicador-card"><span class="item-label">TEMPO TOTAL</span><span class="item-value" id="tempo-total-final">2:45:30</span></div>
             </div>
             
-            <button class="btn-confirmar" onclick="proximaCaixa()">PRÓXIMA CAIXA →</button>
+            <!-- Botão Dinâmico do Django: Reinicia o Loop Logístico -->
+            <button class="btn-confirmar" onclick="window.location.href='{% url 'abertura_caixa' %}'">
+                PRÓXIMA CAIXA →
+            </button>
         </main>
 
+        <!-- Modal de Sucesso -->
         <div id="modal-sucesso" class="modal-sucesso">
             <div class="modal-conteudo">
-                <div class="modal-icone"></div>
+                <div class="modal-icone">📦</div>
                 <h2>Caixa Finalizada!</h2>
                 <p>Picking concluído com sucesso.</p>
                 <button class="btn-ok" onclick="fecharModalSucesso()">Ok</button>
             </div>
         </div>
-        <script src="../../script.js"></script>
+        
+        <!-- JavaScript padronizado do projeto -->
+        <script src="{% static 'js/script.js' %}"></script>
     </div>
 </body>
 </html>

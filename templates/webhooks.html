@@ -1,11 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webhooks Dashboard MES</title>
-    <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
-    <link rel="stylesheet" href="../../style.css">
+    <title>Dashboard MES - Configuração de Webhooks</title>
+    
+    <!-- Ícone e CSS gerenciados pelo motor do Django -->
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="dashboard-mes">
     <header>
@@ -14,97 +17,142 @@
                 <span class="logo-text">MES</span>
                 <span class="logo-subtitle">PICKING</span>
             </div>
-            <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="kyly-logo">
+            <!-- Imagem padronizada com a tag estática do Django -->
+            <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="kyly-logo">
         </div>
         <div class="header-right">
             <button class="theme-toggle" id="themeToggle" title="Alternar tema">
-                <span class="theme-icon"></span>
+                <span class="theme-icon">🌙</span>
             </button>
             <span class="data-atual" id="dataAtual"></span>
         </div>
     </header>
+    
+    <!-- Menu de Navegação 100% Dinâmico com Rotas Django -->
     <nav class="nav-menu">
-        <a href="../index/index.html" class="nav-item">KPIs Tempo Real</a>
-        <a href="../importacao/importacao.html" class="nav-item">Importação</a>
-        <a href="../aging-stock/aging-stock.html" class="nav-item">Aging Stock</a>
-        <a href="../funcionarios/funcionarios.html" class="nav-item">Funcionários</a>
-        <a href="../gerir-kpis/gerir-kpis.html" class="nav-item">Gerir KPIs</a>
-        <a href="#" class="nav-item active">Webhooks</a>
+        <a href="{% url 'dashboard_kpis' %}" class="nav-item">KPIs Tempo Real</a>
+        <a href="{% url 'api_importar_excel' %}" class="nav-item">Importação</a>
+        <a href="{% url 'aging_stock' %}" class="nav-item">Aging Stock</a>
+        <a href="{% url 'dashboard_funcionarios' %}" class="nav-item">Funcionários</a>
+        <a href="{% url 'dashboard_gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
+        <a href="{% url 'dashboard_webhooks' %}" class="nav-item active">Webhooks</a>
     </nav>
+
     <main class="dashboard">
+        
+        <!-- Cabeçalho com o botão de Cadastrar Novo Webhook -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+            <h2 style="color: var(--accent); margin: 0; text-transform: uppercase; letter-spacing: 1px;">📡 Webhooks de Alerta (IoT / APIs)</h2>
+            <button class="btn-primary" style="padding: 10px 20px; font-size: 14px; background: #28a745; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;" onclick="abrirModalWebhook()">
+                + Novo Webhook
+            </button>
+        </div>
+
         <section class="section">
-            <h2>Webhooks Configurados</h2>
+            <h2>Integrações Ativas (Gatilhos do Sistema)</h2>
             <div class="webhooks-list">
+                
+                <!-- Webhook 1: Telegram / Compras (Urgência de Reposição) -->
                 <div class="webhook-item">
-                    <div class="webhook-icon"></div>
+                    <div class="webhook-icon" style="color: #3498db; font-size: 28px;">✈️</div>
                     <div class="webhook-info">
-                        <span class="webhook-name">Notificação de caixa finalizada</span>
-                        <span class="webhook-url">https://api.exemplo.com/webhook/caixa</span>
+                        <span class="webhook-name" style="font-size: 16px;">Compras — Telegram (Reposição)</span>
+                        <span class="webhook-url" style="font-family: monospace; color: var(--text-secondary);">https://api.telegram.org/bot.../sendMessage</span>
+                        <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
+                            Gatilho: <strong style="color: var(--accent);">FALTA_ESTOQUE</strong> · Threshold (Limite): <strong>3 consecutivas</strong>
+                        </div>
                     </div>
                     <span class="webhook-status active">Ativo</span>
+                    <!-- O botão lixo exibe a capacidade de exclusão do CRUD -->
+                    <button class="btn-icon" style="color: #ff6b6b; margin-left: 15px;">🗑️</button>
                 </div>
+
+                <!-- Webhook 2: Manutenção / TI (Heartbeat / Coletor Offline) -->
                 <div class="webhook-item">
-                    <div class="webhook-icon">!</div>
+                    <div class="webhook-icon" style="color: #ff6b6b; font-size: 28px;">⚠️</div>
                     <div class="webhook-info">
-                        <span class="webhook-name">Alerta de erro de picking</span>
-                        <span class="webhook-url">https://api.exemplo.com/webhook/erro</span>
+                        <span class="webhook-name" style="font-size: 16px;">Suporte TI — E-mail (Manutenção)</span>
+                        <span class="webhook-url" style="font-family: monospace; color: var(--text-secondary);">mailto:manutencao-ti@kyly.com.br</span>
+                        <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
+                            Gatilho: <strong style="color: var(--accent);">DEVICE_OFFLINE</strong> · Threshold (Limite): <strong>Timeout > 5min</strong>
+                        </div>
                     </div>
                     <span class="webhook-status active">Ativo</span>
+                    <button class="btn-icon" style="color: #ff6b6b; margin-left: 15px;">🗑️</button>
                 </div>
-                <div class="webhook-item">
-                    <div class="webhook-icon"></div>
+
+                <!-- Webhook 3: Aging Stock / ERP (Vendas e Promoção) -->
+                <div class="webhook-item" style="opacity: 0.7;">
+                    <div class="webhook-icon" style="color: #28a745; font-size: 28px;">💰</div>
                     <div class="webhook-info">
-                        <span class="webhook-name">Envio diário de métricas</span>
-                        <span class="webhook-url">https://api.exemplo.com/webhook/metricas</span>
+                        <span class="webhook-name" style="font-size: 16px;">Painel ERP — Logística Reversa</span>
+                        <span class="webhook-url" style="font-family: monospace; color: var(--text-secondary);">https://erp.kyly.com.br/api/aging-stock</span>
+                        <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
+                            Gatilho: <strong style="color: var(--accent);">AGING_STOCK_ALERT</strong> · Threshold (Limite): <strong>> 90 dias</strong>
+                        </div>
                     </div>
-                    <span class="webhook-status inactive">Inativo</span>
+                    <span class="webhook-status inactive" style="background: rgba(255, 255, 255, 0.1); color: var(--text-secondary);">Inativo</span>
+                    <button class="btn-icon" style="color: #ff6b6b; margin-left: 15px;">🗑️</button>
                 </div>
-            </div>
-        </section>
-        <section class="section">
-            <h2>Registrar Novo Webhook</h2>
-            <div class="webhook-form">
-                <div class="form-group">
-                    <label>Nome do Webhook</label>
-                    <input type="text" placeholder="Ex: Notificação de meta batida" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label>URL do Endpoint</label>
-                    <input type="url" placeholder="https://api.exemplo.com/webhook" class="form-input">
-                </div>
-                <div class="form-group">
-                    <label>Evento</label>
-                    <select class="form-input">
-                        <option>Caixa finalizada</option>
-                        <option>Erro de picking</option>
-                        <option>Meta diária batida</option>
-                        <option>Operador chegou/exitiu</option>
-                    </select>
-                </div>
-                <button class="btn btn-primary">Adicionar Webhook</button>
-            </div>
-        </section>
-        <section class="section">
-            <h2>Logs de Webhooks</h2>
-            <div class="logs-list">
-                <div class="log-item">
-                    <span class="log-datetime">08/05 14:32:15</span>
-                    <span class="log-event">Caixa #78912340 finalizada</span>
-                    <span class="log-status success">200 OK</span>
-                </div>
-                <div class="log-item">
-                    <span class="log-datetime">08/05 14:28:03</span>
-                    <span class="log-event">Alerta: Erro no SKU-55443</span>
-                    <span class="log-status success">200 OK</span>
-                </div>
-                <div class="log-item">
-                    <span class="log-datetime">08/05 12:00:00</span>
-                    <span class="log-event">Envio diário de métricas</span>
-                    <span class="log-status error">500 ERR</span>
-                </div>
+
             </div>
         </section>
     </main>
-    <script src="../../script.js"></script>
+
+    <!-- Modal de Cadastro de Webhook -->
+    <div id="modal-webhook" class="modal-parcial" style="display: none; position: fixed; inset: 0; background: rgba(11, 18, 32, 0.9); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="modal-conteudo" style="background: var(--bg-secondary); border: 1px solid var(--accent); padding: 30px; border-radius: 12px; width: 450px; text-align: left; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+            <h3 style="color: var(--text-primary); margin-bottom: 20px;">Registrar Novo Webhook</h3>
+
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Nome do Alerta / Destino</label>
+                    <input type="text" placeholder="Ex: Bot Telegram Compras" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
+                </div>
+
+                <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">URL do Endpoint (API Externa)</label>
+                    <input type="url" placeholder="https://api.exemplo.com/webhook" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
+                </div>
+
+                <div style="display: flex; gap: 15px;">
+                    <div class="form-group" style="display: flex; flex-direction: column; gap: 5px; flex: 2;">
+                        <label style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Evento Gatilho</label>
+                        <select style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
+                            <option value="FALTA_ESTOQUE">Falta de Peça no Endereço</option>
+                            <option value="DEVICE_OFFLINE">Coletor Offline (Heartbeat)</option>
+                            <option value="AGING_STOCK">Aging Stock (> 90 dias)</option>
+                            <option value="CAIXA_PARCIAL">Caixa Encerrada Parcialmente</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="display: flex; flex-direction: column; gap: 5px; flex: 1;">
+                        <label style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Threshold (Limite)</label>
+                        <input type="number" placeholder="Ex: 3" value="3" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff; text-align: center;">
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                    <button onclick="fecharModalWebhook()" style="padding: 10px 15px; background: transparent; color: #fff; border: 1px solid #fff; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                    <!-- Na VM, este botão envia um POST para a API Django gravar na tabela WEBHOOK_CONFIG -->
+                    <button onclick="fecharModalWebhook()" style="padding: 10px 15px; background: #28a745; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Cadastrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript padronizado do projeto -->
+    <script src="{% static 'js/script.js' %}"></script>
+    
+    <!-- Mini-script para abrir/fechar o Modal de Cadastro -->
+    <script>
+        function abrirModalWebhook() {
+            document.getElementById('modal-webhook').style.display = 'flex';
+        }
+        function fecharModalWebhook() {
+            document.getElementById('modal-webhook').style.display = 'none';
+        }
+    </script>
 </body>
 </html>

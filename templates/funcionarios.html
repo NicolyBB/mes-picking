@@ -1,11 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Funcionários Dashboard MES</title>
-    <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
-    <link rel="stylesheet" href="../../style.css">
+    <title>Dashboard MES - Gestão de Funcionários</title>
+    
+    <!-- Ícone e CSS gerenciados pelo motor do Django -->
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="dashboard-mes">
     <header>
@@ -14,90 +17,141 @@
                 <span class="logo-text">MES</span>
                 <span class="logo-subtitle">PICKING</span>
             </div>
-            <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="kyly-logo">
+            <!-- Imagem padronizada com a tag estática do Django -->
+            <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="kyly-logo">
         </div>
         <div class="header-right">
             <button class="theme-toggle" id="themeToggle" title="Alternar tema">
-                <span class="theme-icon"></span>
+                <span class="theme-icon">🌙</span>
             </button>
             <span class="data-atual" id="dataAtual"></span>
         </div>
     </header>
+    
+    <!-- Menu de Navegação 100% Dinâmico com Rotas Django -->
     <nav class="nav-menu">
-        <a href="../index/index.html" class="nav-item">KPIs Tempo Real</a>
-        <a href="../importacao/importacao.html" class="nav-item">Importação</a>
-        <a href="../aging-stock/aging-stock.html" class="nav-item">Aging Stock</a>
-        <a href="#" class="nav-item active">Funcionários</a>
-        <a href="../gerir-kpis/gerir-kpis.html" class="nav-item">Gerir KPIs</a>
-        <a href="../webhooks/webhooks.html" class="nav-item">Webhooks</a>
+        <a href="{% url 'dashboard_kpis' %}" class="nav-item">KPIs Tempo Real</a>
+        <a href="{% url 'api_importar_excel' %}" class="nav-item">Importação</a>
+        <a href="{% url 'aging_stock' %}" class="nav-item">Aging Stock</a>
+        <a href="{% url 'dashboard_funcionarios' %}" class="nav-item active">Funcionários</a>
+        <a href="{% url 'dashboard_gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
+        <a href="{% url 'dashboard_webhooks' %}" class="nav-item">Webhooks</a>
     </nav>
+
     <main class="dashboard">
         <section class="section">
-            <h2>Equipe de Operadores</h2>
-            <div class="funcionarios-grid">
-                <div class="funcionario-card">
-                    <div class="func-avatar">JO</div>
-                    <div class="func-info">
-                        <span class="func-nome">João Silva</span>
-                        <span class="func-setor">Picking A</span>
+            
+            <!-- Cabeçalho da Seção com Busca e Ação ADM -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+                <h2 style="margin: 0;">Equipe Operacional (6)</h2>
+                
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div class="search-box" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 15px; display: flex; align-items: center;">
+                        <span style="margin-right: 10px; color: var(--text-secondary);">🔍</span>
+                        <input type="text" placeholder="Buscar crachá ou nome..." style="background: transparent; border: none; color: var(--text-primary); outline: none; width: 220px;">
                     </div>
-                    <div class="func-status online"></div>
-                </div>
-                <div class="funcionario-card">
-                    <div class="func-avatar">MA</div>
-                    <div class="func-info">
-                        <span class="func-nome">Maria Alves</span>
-                        <span class="func-setor">Picking A</span>
-                    </div>
-                    <div class="func-status online"></div>
-                </div>
-                <div class="funcionario-card">
-                    <div class="func-avatar">PE</div>
-                    <div class="func-info">
-                        <span class="func-nome">Pedro Costa</span>
-                        <span class="func-setor">Picking B</span>
-                    </div>
-                    <div class="func-status online"></div>
-                </div>
-                <div class="funcionario-card">
-                    <div class="func-avatar">CA</div>
-                    <div class="func-info">
-                        <span class="func-nome">Carlos Santos</span>
-                        <span class="func-setor">Picking B</span>
-                    </div>
-                    <div class="func-status away"></div>
-                </div>
-                <div class="funcionario-card">
-                    <div class="func-avatar">LU</div>
-                    <div class="func-info">
-                        <span class="func-nome">Lucas Lima</span>
-                        <span class="func-setor">Picking C</span>
-                    </div>
-                    <div class="func-status online"></div>
+                    <!-- Na VM, este botão abrirá o Modal para inserir (INSERT INTO) na tabela USUARIO -->
+                    <button class="btn-primary" style="padding: 10px 20px; font-size: 14px; background: #28a745; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                        + Cadastrar
+                    </button>
                 </div>
             </div>
-        </section>
-        <section class="section">
-            <h2>Estatísticas da Equipe</h2>
-            <div class="cards-row">
-                <div class="card">
-                    <span class="card-label">TOTAL</span>
-                    <span class="card-value">12</span>
-                    <span class="card-subtitle">Funcionários</span>
+
+            <!-- Grade de Funcionários com Dados Reais Injetados -->
+            <div class="funcionarios-grid">
+                
+                <!-- Operadora Top Performance -->
+                <div class="funcionario-card" style="border-left: 3px solid #d4af11;">
+                    <div class="func-avatar" style="background: linear-gradient(135deg, #d4af11, #b8940f); color: #003366;">RC</div>
+                    <div class="func-info">
+                        <span class="func-nome">Renata Cruz <small style="color: var(--text-secondary); margin-left: 5px;">(K-1345)</small></span>
+                        <span class="func-setor">COLABORADOR · Setor A · T1</span>
+                    </div>
+                    <div class="func-status online" title="Ativo" style="color: #28a745; font-size: 10px;">🟢</div>
                 </div>
-                <div class="card card-dark">
-                    <span class="card-label">ONLINE</span>
-                    <span class="card-value">9</span>
-                    <span class="card-subtitle">Em atividade</span>
+
+                <!-- Operadora -->
+                <div class="funcionario-card">
+                    <div class="func-avatar">CM</div>
+                    <div class="func-info">
+                        <span class="func-nome">Carla Mendes <small style="color: var(--text-secondary); margin-left: 5px;">(K-1042)</small></span>
+                        <span class="func-setor">COLABORADOR · Setor A · T1</span>
+                    </div>
+                    <div class="func-status online" title="Ativo" style="color: #28a745; font-size: 10px;">🟢</div>
                 </div>
-                <div class="card card-dark">
-                    <span class="card-label">PPH MÉDIO</span>
-                    <span class="card-value">42</span>
-                    <span class="card-subtitle">Equipe</span>
+
+                <!-- Operador -->
+                <div class="funcionario-card">
+                    <div class="func-avatar">BL</div>
+                    <div class="func-info">
+                        <span class="func-nome">Bruno Lima <small style="color: var(--text-secondary); margin-left: 5px;">(K-1188)</small></span>
+                        <span class="func-setor">COLABORADOR · Setor B · T2</span>
+                    </div>
+                    <div class="func-status online" title="Ativo" style="color: #28a745; font-size: 10px;">🟢</div>
                 </div>
+
+                <!-- Supervisora (Destaque Visual) -->
+                <div class="funcionario-card" style="border: 1px solid #003366; background: rgba(0, 51, 102, 0.1);">
+                    <div class="func-avatar" style="border-color: #003366; color: #003366; background: #fff;">PS</div>
+                    <div class="func-info">
+                        <span class="func-nome" style="font-weight: 800;">Patrícia Souza <small style="color: var(--text-secondary); margin-left: 5px;">(K-0987)</small></span>
+                        <span class="func-setor" style="color: #d4af11; font-weight: bold;">SUPERVISOR · Setor C · T1</span>
+                    </div>
+                    <div class="func-status online" title="Ativo" style="color: #28a745; font-size: 10px;">🟢</div>
+                </div>
+
+                <!-- Operador Inativo -->
+                <div class="funcionario-card" style="opacity: 0.6;">
+                    <div class="func-avatar" style="border-color: #ff6b6b; color: #ff6b6b;">DA</div>
+                    <div class="func-info">
+                        <span class="func-nome">Diego Antunes <small style="color: var(--text-secondary); margin-left: 5px;">(K-1230)</small></span>
+                        <span class="func-setor">COLABORADOR · Setor D · T3</span>
+                    </div>
+                    <div class="func-status away" title="Inativo" style="color: #ff6b6b; font-size: 10px;">🔴</div>
+                </div>
+
+                <!-- Operador -->
+                <div class="funcionario-card">
+                    <div class="func-avatar">FG</div>
+                    <div class="func-info">
+                        <span class="func-nome">Felipe Gomes <small style="color: var(--text-secondary); margin-left: 5px;">(K-1502)</small></span>
+                        <span class="func-setor">COLABORADOR · Setor E · T2</span>
+                    </div>
+                    <div class="func-status online" title="Ativo" style="color: #28a745; font-size: 10px;">🟢</div>
+                </div>
+
             </div>
         </section>
     </main>
-    <script src="../../script.js"></script>
+
+    <!-- Modal de Cadastro de Funcionário (Oculto por padrão, acionado pelo botão + Cadastrar) -->
+    <div id="modal-cadastrar" class="modal-parcial" style="display: none;">
+        <div class="modal-conteudo" style="background: var(--bg-secondary); border: 1px solid var(--accent); padding: 30px; border-radius: 12px; width: 400px; text-align: left;">
+            <h3 style="color: var(--text-primary); margin-bottom: 20px;">Cadastrar Novo Funcionário</h3>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <input type="text" placeholder="Nome Completo" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
+                <input type="text" placeholder="Código Crachá (Ex: K-9999)" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
+                <select style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
+                    <option value="COLABORADOR">Colaborador</option>
+                    <option value="SUPERVISOR">Supervisor</option>
+                    <option value="ADM">Administrador</option>
+                </select>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                    <button onclick="document.getElementById('modal-cadastrar').style.display='none'" style="padding: 8px 15px; background: transparent; color: #fff; border: 1px solid #fff; border-radius: 6px; cursor: pointer;">Cancelar</button>
+                    <button style="padding: 8px 15px; background: #28a745; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript padronizado do projeto -->
+    <script src="{% static 'js/script.js' %}"></script>
+
+    <!-- Mini-script para abrir o Modal do ADM -->
+    <script>
+        document.querySelector('.btn-primary').addEventListener('click', function() {
+            document.getElementById('modal-cadastrar').style.display = 'flex';
+        });
+    </script>
 </body>
 </html>

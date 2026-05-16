@@ -1,11 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aging Stock Dashboard MES</title>
-    <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
-    <link rel="stylesheet" href="../../style.css">
+    
+    <!-- Ícone e CSS gerenciados pelo motor do Django -->
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="dashboard-mes">
     <header>
@@ -14,23 +17,27 @@
                 <span class="logo-text">MES</span>
                 <span class="logo-subtitle">PICKING</span>
             </div>
-            <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="kyly-logo">
+            <!-- Imagem padronizada com a tag estática do Django -->
+            <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="kyly-logo">
         </div>
         <div class="header-right">
             <button class="theme-toggle" id="themeToggle" title="Alternar tema">
-                <span class="theme-icon"></span>
+                <span class="theme-icon">🌙</span>
             </button>
             <span class="data-atual" id="dataAtual"></span>
         </div>
     </header>
+
+    <!-- Menu de Navegação 100% Dinâmico com Rotas Django -->
     <nav class="nav-menu">
-        <a href="../index/index.html" class="nav-item">KPIs Tempo Real</a>
-        <a href="../importacao/importacao.html" class="nav-item">Importação</a>
-        <a href="#" class="nav-item active">Aging Stock</a>
-        <a href="../funcionarios/funcionarios.html" class="nav-item">Funcionários</a>
-        <a href="../gerir-kpis/gerir-kpis.html" class="nav-item">Gerir KPIs</a>
-        <a href="../webhooks/webhooks.html" class="nav-item">Webhooks</a>
+        <a href="{% url 'dashboard_kpis' %}" class="nav-item">KPIs Tempo Real</a>
+        <a href="{% url 'api_importar_excel' %}" class="nav-item">Importação</a>
+        <a href="{% url 'aging_stock' %}" class="nav-item active">Aging Stock</a>
+        <a href="{% url 'dashboard_funcionarios' %}" class="nav-item">Funcionários</a>
+        <a href="{% url 'dashboard_gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
+        <a href="{% url 'dashboard_webhooks' %}" class="nav-item">Webhooks</a>
     </nav>
+
     <main class="dashboard">
         <section class="section">
             <h2>Aging Stock - Visão Geral</h2>
@@ -41,75 +48,89 @@
                 </div>
                 <div class="aging-stat">
                     <span class="aging-value">23</span>
-                    <span class="aging-label">Muitos dias sem movimento</span>
+                    <span class="aging-label">Atenção (+60 dias)</span>
                 </div>
                 <div class="aging-stat">
-                    <span class="aging-value">8</span>
-                    <span class="aging-label">Críticos (+30 dias)</span>
+                    <span class="aging-value" style="color: #ff6b6b;">5</span>
+                    <span class="aging-label">Críticos (+90 dias)</span>
                 </div>
             </div>
         </section>
+
+        <!-- Seção Dinâmica de Itens Críticos baseada nos Dados de ROI da Kyly -->
         <section class="section">
-            <h2>! Itens Críticos (+30 dias)</h2>
+            <h2>⚠️ Peças paradas há 90+ dias (Ação Recomendada)</h2>
             <div class="aging-list">
+                
                 <div class="aging-item critical">
                     <div class="aging-info">
-                        <span class="aging-code">SKU-12345</span>
-                        <span class="aging-name">Produto Exemplo Alpha</span>
+                        <span class="aging-code">Ref 1000044</span>
+                        <span class="aging-name">Cor 11020 · Setor A05</span>
                     </div>
                     <div class="aging-details">
-                        <span class="aging-days">45 dias</span>
-                        <span class="aging-qty">120 un</span>
+                        <!-- Estilização aplicada com base no seu CSS para destacar criticidade -->
+                        <span class="aging-days" style="background: rgba(255,107,107,0.2); padding: 5px 10px; border-radius: 5px;">187 dias</span>
+                        <span class="aging-qty">12 un</span>
+                        <button class="btn-secondary" style="margin-left: 20px; font-size: 12px; color: #d4af11; border: 1px solid #d4af11; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Liquidar →</button>
                     </div>
                 </div>
+
                 <div class="aging-item critical">
                     <div class="aging-info">
-                        <span class="aging-code">SKU-98765</span>
-                        <span class="aging-name">Componente Beta</span>
+                        <span class="aging-code">Ref 1000071</span>
+                        <span class="aging-name">Cor 00010 · Setor B02</span>
                     </div>
                     <div class="aging-details">
-                        <span class="aging-days">38 dias</span>
-                        <span class="aging-qty">85 un</span>
+                        <span class="aging-days" style="background: rgba(255,107,107,0.2); padding: 5px 10px; border-radius: 5px;">142 dias</span>
+                        <span class="aging-qty">8 un</span>
+                        <button class="btn-secondary" style="margin-left: 20px; font-size: 12px; color: #d4af11; border: 1px solid #d4af11; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Liquidar →</button>
                     </div>
                 </div>
+
                 <div class="aging-item warning">
                     <div class="aging-info">
-                        <span class="aging-code">SKU-55443</span>
-                        <span class="aging-name">Item Gamma Plus</span>
+                        <span class="aging-code">Ref 1000088</span>
+                        <span class="aging-name">Cor 55012 · Setor C04</span>
                     </div>
                     <div class="aging-details">
-                        <span class="aging-days">32 dias</span>
-                        <span class="aging-qty">200 un</span>
+                        <span class="aging-days" style="background: rgba(212,175,55,0.2); padding: 5px 10px; border-radius: 5px;">121 dias</span>
+                        <span class="aging-qty">24 un</span>
+                        <button class="btn-secondary" style="margin-left: 20px; font-size: 12px; color: #d4af11; border: 1px solid #d4af11; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Liquidar →</button>
                     </div>
                 </div>
+
             </div>
         </section>
+
+        <!-- Faixas de Envelhecimento que o seu CSS possuía classes mas foram cortadas no HTML -->
         <section class="section">
-            <h2>Classificação por Faixa de Dias</h2>
+            <h2>Distribuição por Faixa de Envelhecimento</h2>
             <div class="aging-ranges">
                 <div class="aging-range">
-                    <div class="range-bar range-0-7"></div>
-                    <span class="range-label">0-7 dias</span>
-                    <span class="range-count">89 SKUs</span>
+                    <span class="range-label">0 - 30 dias</span>
+                    <div class="range-bar range-0-7" style="height: 120px; display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: bold; padding-bottom: 5px;">65%</div>
+                    <span class="range-count">101 SKUs</span>
                 </div>
                 <div class="aging-range">
-                    <div class="range-bar range-8-15"></div>
-                    <span class="range-label">8-15 dias</span>
-                    <span class="range-count">34 SKUs</span>
+                    <span class="range-label">31 - 60 dias</span>
+                    <div class="range-bar range-8-15" style="height: 80px; display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: bold; padding-bottom: 5px;">20%</div>
+                    <span class="range-count">32 SKUs</span>
                 </div>
                 <div class="aging-range">
-                    <div class="range-bar range-16-30"></div>
-                    <span class="range-label">16-30 dias</span>
-                    <span class="range-count">15 SKUs</span>
+                    <span class="range-label">61 - 90 dias</span>
+                    <div class="range-bar range-16-30" style="height: 50px; display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: bold; padding-bottom: 5px;">12%</div>
+                    <span class="range-count">18 SKUs</span>
                 </div>
                 <div class="aging-range">
-                    <div class="range-bar range-30-plus"></div>
-                    <span class="range-label">+30 dias</span>
-                    <span class="range-count">8 SKUs</span>
+                    <span class="range-label">+90 dias (Crítico)</span>
+                    <div class="range-bar range-30-plus" style="height: 30px; display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: bold; padding-bottom: 5px;">3%</div>
+                    <span class="range-count">5 SKUs</span>
                 </div>
             </div>
         </section>
     </main>
-    <script src="../../script.js"></script>
+
+    <!-- JavaScript padronizado do projeto (Controlador de Temas, Gráficos e Importações) -->
+    <script src="{% static 'js/script.js' %}"></script>
 </body>
 </html>
