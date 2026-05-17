@@ -1,0 +1,289 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MES PICKING — Gateway Platform</title>
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Arial,sans-serif;}
+        body{background:#0a0f1a;color:#fff;min-height:100vh;}
+
+        /* ── DESKTOP ── */
+        .desktop-view{display:flex;flex-direction:column;min-height:100vh;}
+        .dsk-header{background:rgba(15,23,42,.9);border-bottom:1px solid rgba(255,255,255,.08);padding:16px 40px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px);}
+        .dsk-brand{display:flex;align-items:center;gap:14px;}
+        .dsk-brand .logo-text{font-size:22px;font-weight:800;color:#d4af11;letter-spacing:2px;}
+        .dsk-brand .logo-sub{font-size:10px;color:#8892b0;letter-spacing:3px;text-transform:uppercase;}
+        .dsk-brand img{height:42px;}
+        .dsk-status{font-size:13px;color:#8892b0;}
+        .dsk-status .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:5px;animation:blink 1.5s infinite;}
+
+        .dsk-main{flex:1;display:flex;align-items:center;justify-content:center;gap:40px;padding:40px;flex-wrap:wrap;}
+
+        /* LOGIN CARD */
+        .login-card{background:rgba(15,23,42,.95);border:1px solid rgba(212,175,17,.3);border-radius:20px;padding:40px;width:400px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+        .login-card h2{color:#d4af11;font-size:1.4rem;margin-bottom:6px;}
+        .login-card p{color:#8892b0;font-size:.9rem;margin-bottom:28px;}
+
+        .cracha-input-wrap{position:relative;margin-bottom:20px;}
+        .cracha-input{width:100%;padding:18px 20px 18px 52px;background:rgba(26,42,74,.8);border:2px solid rgba(212,175,17,.4);border-radius:12px;color:#fff;font-size:1.1rem;outline:none;transition:border .3s;}
+        .cracha-input:focus{border-color:#d4af11;}
+        .cracha-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:1.3rem;color:#d4af11;}
+
+        .btn-entrar{width:100%;padding:16px;background:linear-gradient(135deg,#d4af11,#b8940f);color:#003366;font-size:1rem;font-weight:700;border:none;border-radius:12px;cursor:pointer;transition:all .3s;letter-spacing:1px;}
+        .btn-entrar:hover{transform:scale(1.02);box-shadow:0 8px 25px rgba(212,175,17,.4);}
+        .btn-entrar:active{transform:scale(.98);}
+
+        .login-feedback{margin-top:16px;padding:12px 16px;border-radius:10px;font-size:.9rem;display:none;text-align:center;}
+        .login-feedback.success{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;}
+        .login-feedback.error{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#ef4444;}
+
+        /* MENU DE OPÇÕES PÓS-LOGIN */
+        .opcoes-wrap{display:none;margin-top:24px;flex-direction:column;gap:10px;}
+        .opcao-btn{display:flex;align-items:center;gap:12px;padding:14px 18px;background:rgba(26,42,74,.6);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:#fff;text-decoration:none;font-size:.95rem;font-weight:500;transition:all .25s;}
+        .opcao-btn:hover{background:rgba(212,175,17,.12);border-color:rgba(212,175,17,.4);color:#d4af11;transform:translateX(4px);}
+        .opcao-icon{font-size:1.3rem;}
+
+        /* INFO CARD */
+        .info-cards{display:flex;flex-direction:column;gap:20px;width:320px;}
+        .info-card{background:rgba(15,23,42,.7);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:24px;transition:all .3s;}
+        .info-card:hover{border-color:rgba(212,175,17,.3);transform:translateY(-3px);}
+        .info-card-icon{font-size:2rem;margin-bottom:10px;}
+        .info-card h3{font-size:1rem;color:#ccd6f6;margin-bottom:6px;}
+        .info-card p{font-size:.85rem;color:#8892b0;line-height:1.5;}
+        .info-card .badge{display:inline-block;margin-top:10px;padding:4px 10px;border-radius:8px;font-size:.75rem;font-weight:600;}
+        .badge-adm{background:rgba(212,175,17,.15);color:#d4af11;}
+        .badge-sup{background:rgba(59,130,246,.15);color:#3b82f6;}
+        .badge-op{background:rgba(16,185,129,.15);color:#10b981;}
+
+        /* ── MOBILE ── */
+        .mobile-view{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:30px;text-align:center;}
+        .mobile-view h1{color:#d4af11;font-size:2rem;margin-bottom:8px;}
+        .mobile-view p{color:#8892b0;margin-bottom:30px;}
+        .mobile-btn{display:block;background:#d4af11;color:#003366;font-weight:700;padding:18px 40px;border-radius:12px;font-size:1.1rem;text-decoration:none;margin-bottom:14px;width:100%;max-width:320px;}
+        .mobile-btn-sec{display:block;background:rgba(255,255,255,.05);color:#fff;border:1px solid rgba(255,255,255,.15);font-weight:600;padding:14px 40px;border-radius:12px;font-size:1rem;text-decoration:none;width:100%;max-width:320px;}
+
+        @keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+
+        @media(max-width:767px){
+            .desktop-view{display:none;}
+            .mobile-view{display:flex;}
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ══ DESKTOP ══ -->
+    <div class="desktop-view">
+        <header class="dsk-header">
+            <div class="dsk-brand">
+                <div>
+                    <div class="logo-text">MES PICKING</div>
+                    <div class="logo-sub">Kyly Industrial</div>
+                </div>
+                <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY">
+            </div>
+            <div class="dsk-status">
+                <span class="dot"></span>Sistema Online
+            </div>
+        </header>
+
+        {% csrf_token %}
+
+        <main class="dsk-main">
+            <!-- Card de Login -->
+            <div class="login-card">
+                <h2>🔑 Acesso ao Sistema</h2>
+                <p>Escaneie seu crachá, digite manualmente ou use a câmera para entrar.</p>
+
+                <div class="cracha-input-wrap">
+                    <span class="cracha-icon">🪪</span>
+                    <input
+                        type="text"
+                        id="inputCracha"
+                        class="cracha-input"
+                        placeholder="Bipie ou digite o crachá..."
+                        autocomplete="off"
+                        autofocus
+                    >
+                </div>
+
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-entrar" id="btnEntrar" onclick="fazerLogin()" style="flex: 1;">
+                        → Entrar
+                    </button>
+                    <button id="btnCamera" style="background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: #fff; padding: 0 20px; border-radius: 12px; cursor: pointer; transition: 0.3s;" title="Ler com a câmera">
+                        📷
+                    </button>
+                </div>
+
+                <!-- Container do Scanner -->
+                <div id="reader-container" style="display: none; margin-top: 20px; background: #000; border-radius: 10px; overflow: hidden; border: 1px solid rgba(212,175,17,.4);">
+                    <div id="reader" style="width: 100%;"></div>
+                    <button id="btnFecharCamera" style="width: 100%; padding: 10px; background: #ef4444; color: white; border: none; cursor: pointer; font-weight: bold;">Cancelar Câmera</button>
+                </div>
+
+                <div class="login-feedback" id="feedbackLogin"></div>
+
+                <!-- Opções pós-login -->
+                <div class="opcoes-wrap" id="opcoesWrap"></div>
+            </div>
+
+            <!-- Info Cards -->
+            <div class="info-cards">
+                <div class="info-card">
+                    <div class="info-card-icon">📊</div>
+                    <h3>Administrador</h3>
+                    <p>Acesso completo: KPIs, Funcionários, Webhooks, Importação e Chão de Fábrica.</p>
+                    <span class="badge badge-adm">ADM</span>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-icon">👷</div>
+                    <h3>Supervisor</h3>
+                    <p>Painel de Operações em tempo real e acesso ao Chão de Fábrica.</p>
+                    <span class="badge badge-sup">SUPERVISOR</span>
+                </div>
+                <div class="info-card">
+                    <div class="info-card-icon">🏭</div>
+                    <h3>Operador</h3>
+                    <p>Acesso exclusivo ao fluxo de picking via coletor laser Datalogic.</p>
+                    <span class="badge badge-op">COLABORADOR</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ══ MOBILE (< 768px) → Chão de Fábrica direto ══ -->
+    <div class="mobile-view">
+        <div style="font-size:3rem;margin-bottom:16px;">📦</div>
+        <h1>MES PICKING</h1>
+        <p>Motor Industrial de Separação</p>
+        <a href="{% url 'login_supervisor' %}" class="mobile-btn">🔑 Iniciar Coletor (Requer Supervisor)</a>
+        <a href="#" onclick="document.querySelector('.cracha-input').focus(); document.querySelector('.mobile-view').style.display='none'; document.querySelector('.desktop-view').style.display='flex';" class="mobile-btn-sec">👷 Acesso Dashboard</a>
+    </div>
+
+    <script>
+        const inputCracha = document.getElementById('inputCracha');
+        const feedback = document.getElementById('feedbackLogin');
+        const opcoesWrap = document.getElementById('opcoesWrap');
+
+        // Enter também submete
+        inputCracha.addEventListener('keydown', e => {
+            if (e.key === 'Enter') fazerLogin();
+        });
+
+        // Auto-login quando coletor laser digita rápido (>4 chars em <300ms)
+        let timerBipe = null;
+        inputCracha.addEventListener('input', () => {
+            clearTimeout(timerBipe);
+            timerBipe = setTimeout(() => {
+                const val = inputCracha.value.trim();
+                if (val.length >= 4) fazerLogin();
+            }, 300);
+        });
+
+        async function fazerLogin() {
+            const cracha = inputCracha.value.trim();
+            if (!cracha) {
+                mostrarFeedback('Digite ou escaneie seu crachá.', 'error');
+                return;
+            }
+
+            document.getElementById('btnEntrar').textContent = '⏳ Verificando...';
+
+            try {
+                const res = await fetch('/auth/api/v1/login-desktop/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
+                    body: JSON.stringify({cracha})
+                });
+                const data = await res.json();
+
+                if (data.status === 'sucesso') {
+                    mostrarFeedback(`✅ Bem-vindo, ${data.nome}! (${data.perfil})`, 'success');
+                    renderOpcoes(data.opcoes, data.redirect);
+                } else {
+                    mostrarFeedback(`❌ ${data.mensagem}`, 'error');
+                    inputCracha.value = '';
+                    inputCracha.focus();
+                }
+            } catch (err) {
+                mostrarFeedback('❌ Erro de conexão. Tente novamente.', 'error');
+            }
+
+            document.getElementById('btnEntrar').textContent = '→ Entrar';
+        }
+
+        function mostrarFeedback(msg, tipo) {
+            feedback.textContent = msg;
+            feedback.className = 'login-feedback ' + tipo;
+            feedback.style.display = 'block';
+        }
+
+        function renderOpcoes(opcoes, redirectPadrao) {
+            if (!opcoes || opcoes.length === 0) {
+                window.location.href = redirectPadrao;
+                return;
+            }
+            opcoesWrap.innerHTML = '<p style="color:#8892b0;font-size:.85rem;margin-bottom:8px;">Selecione onde deseja acessar:</p>';
+            opcoes.forEach(op => {
+                const a = document.createElement('a');
+                a.href = op.url;
+                a.className = 'opcao-btn';
+                a.innerHTML = `<span class="opcao-icon">${op.icon}</span><span>${op.label}</span>`;
+                opcoesWrap.appendChild(a);
+            });
+            opcoesWrap.style.display = 'flex';
+            document.getElementById('btnEntrar').style.display = 'none';
+        }
+
+        function getCookie(name) {
+            let v = null;
+            document.cookie.split(';').forEach(c => {
+                c = c.trim();
+                if (c.startsWith(name + '=')) v = decodeURIComponent(c.slice(name.length + 1));
+            });
+            return v;
+        }
+    </script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script>
+        // Lógica do Scanner de Câmera
+        let html5QrcodeScanner = null;
+        
+        document.getElementById('btnCamera').addEventListener('click', () => {
+            const container = document.getElementById('reader-container');
+            container.style.display = 'block';
+            
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 100} }, false);
+                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            }
+        });
+
+        document.getElementById('btnFecharCamera').addEventListener('click', () => {
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear().then(() => {
+                    document.getElementById('reader-container').style.display = 'none';
+                    html5QrcodeScanner = null;
+                });
+            } else {
+                document.getElementById('reader-container').style.display = 'none';
+            }
+        });
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Joga o texto lido pro input e aciona o login
+            inputCracha.value = decodedText;
+            document.getElementById('btnFecharCamera').click(); // fecha a câmera
+            fazerLogin();
+        }
+
+        function onScanFailure(error) {
+            // Ignora erros contínuos enquanto não achar código
+        }
+    </script>
+</body>
+</html>

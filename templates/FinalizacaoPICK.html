@@ -1,15 +1,17 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MES PICKING - Caixa Finalizada</title>
-    
+
     <!-- Ícone e CSS gerenciados pelo motor do Django -->
     <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
+
 <body class="pnl-pick pnl-step-5">
     <div class="mobile-wrapper">
         <header>
@@ -18,30 +20,43 @@
             <div class="header-content">
                 <span class="header-icon"></span>
                 <h1>MES PICKING</h1>
-                <span class="header-progress">10/10</span>
+                <span class="header-progress">{{ total_pecas|default:"0" }}/{{ total_pecas|default:"0" }}</span>
             </div>
         </header>
-        
+
         <main class="centro">
-            <!-- Feedback Visual de Sucesso Total -->
+            <!-- Feedback Visual — muda cor e ícone se for PARCIAL -->
+            {% if status_caixa == 'PARCIAL' %}
+            <div class="check-icon" style="background: #f59e0b;">⚠</div>
+            <h2 id="statusTexto" style="color: #f59e0b;">CAIXA PARCIAL</h2>
+            <span class="passo-label" id="pedido-info">PEDIDO #{{ pedido_numero|default:"------" }} — {{ pecas_bipadas|default:"0" }}/{{ total_pecas|default:"0" }} peças coletadas</span>
+            {% else %}
             <div class="check-icon">✓</div>
             <h2 id="statusTexto">CAIXA FINALIZADA</h2>
-            <span class="passo-label" id="pedido-info">PEDIDO #78912340 10 peças</span>
-            
+            <span class="passo-label" id="pedido-info">PEDIDO #{{ pedido_numero|default:"------" }} {{ total_pecas|default:"0" }} peças</span>
+            {% endif %}
+
             <!-- KPIs Individuais do Operador na conclusão -->
             <div class="indicadores-finais">
-                <div class="indicador-card"><span class="item-label">PPH</span><span class="item-value" id="pph-final">48</span></div>
-                <div class="indicador-card"><span class="item-label">TEMPO</span><span class="item-value" id="tempo-final">15:42</span></div>
-                <div class="indicador-card"><span class="item-label">STREAK</span><span class="item-value" id="streak-final">10</span></div>
-                <div class="indicador-card"><span class="item-label">TAXA ACERTOS</span><span class="item-value" id="acertos-final">98%</span></div>
-                <div class="indicador-card"><span class="item-label">CAIXAS HOJE</span><span class="item-value" id="caixas-final">12</span></div>
-                <div class="indicador-card"><span class="item-label">TEMPO TOTAL</span><span class="item-value" id="tempo-total-final">2:45:30</span></div>
+                <div class="indicador-card"><span class="item-label">PPH</span><span class="item-value"
+                        id="pph-final">{{ pph|default:"0" }}</span></div>
+                <div class="indicador-card"><span class="item-label">TEMPO</span><span class="item-value"
+                        id="tempo-final">{{ tempo|default:"00:00" }}</span></div>
+                <div class="indicador-card"><span class="item-label">STREAK</span><span class="item-value"
+                        id="streak-final">{{ streak|default:"0" }}</span></div>
+                <div class="indicador-card"><span class="item-label">TAXA ACERTOS</span><span class="item-value"
+                        id="acertos-final">{{ acertos|default:"100%" }}</span></div>
+                <div class="indicador-card"><span class="item-label">CAIXAS HOJE</span><span class="item-value"
+                        id="caixas-final">{{ caixas_hoje|default:"1" }}</span></div>
+                <div class="indicador-card"><span class="item-label">TEMPO TOTAL</span><span class="item-value"
+                        id="tempo-total-final">{{ tempo_total|default:"00:00" }}</span></div>
             </div>
-            
+
             <!-- Botão Dinâmico do Django: Reinicia o Loop Logístico -->
-            <button class="btn-confirmar" onclick="window.location.href='{% url 'abertura_caixa' %}'">
+            <a href="{% url 'abertura_caixa' %}" class="btn-confirmar"
+                style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
                 PRÓXIMA CAIXA →
-            </button>
+            </a>
         </main>
 
         <!-- Modal de Sucesso -->
@@ -53,9 +68,10 @@
                 <button class="btn-ok" onclick="fecharModalSucesso()">Ok</button>
             </div>
         </div>
-        
+
         <!-- JavaScript padronizado do projeto -->
         <script src="{% static 'js/script.js' %}"></script>
     </div>
 </body>
+
 </html>

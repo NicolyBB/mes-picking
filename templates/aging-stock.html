@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="dashboard-mes">
+    <form style="display:none;">{% csrf_token %}</form>
     <header>
         <div class="header-left">
             <div class="logo-container">
@@ -31,27 +32,42 @@
     <!-- Menu de Navegação 100% Dinâmico com Rotas Django -->
     <nav class="nav-menu">
         <a href="{% url 'dashboard_kpis' %}" class="nav-item">KPIs Tempo Real</a>
-        <a href="{% url 'api_importar_excel' %}" class="nav-item">Importação</a>
         <a href="{% url 'aging_stock' %}" class="nav-item active">Aging Stock</a>
-        <a href="{% url 'dashboard_funcionarios' %}" class="nav-item">Funcionários</a>
-        <a href="{% url 'dashboard_gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
-        <a href="{% url 'dashboard_webhooks' %}" class="nav-item">Webhooks</a>
+        <a href="{% url 'painel_operacoes' %}" class="nav-item">Painel do Supervisor</a>
+        {% if perfil_usuario == 'ADM' %}
+        <a href="{% url 'importacao' %}" class="nav-item">Importação</a>
+        <a href="{% url 'funcionarios' %}" class="nav-item">Funcionários</a>
+        <a href="{% url 'gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
+        <a href="{% url 'webhooks' %}" class="nav-item">Webhooks</a>
+        {% endif %}
     </nav>
 
     <main class="dashboard">
+        <!-- FILTROS ADICIONADOS (Pedido pelo usuário) -->
+        <div class="period-filter-bar" style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; background: var(--bg-secondary); padding: 10px 15px; border-radius: 8px;">
+            <span class="period-label" style="color: var(--text-secondary); font-size: 14px; font-weight: 600;">📅 Seleção/Filtro:</span>
+            <button class="period-btn active" data-filter="todos" style="padding: 6px 12px; border-radius: 6px; border: none; background: #d4af11; color: #000; font-weight: bold; cursor: pointer;">Todos</button>
+            <button class="period-btn" data-filter="setor_a" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer;">Setor A</button>
+            <button class="period-btn" data-filter="setor_b" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer;">Setor B</button>
+            <button class="period-btn" data-filter="setor_c" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer;">Setor C</button>
+            <button class="period-btn" data-filter="critico" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer;">+90 Dias</button>
+            <button class="period-btn" data-filter="atencao" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); cursor: pointer;">+60 Dias</button>
+            <input type="text" id="agingSearch" placeholder="Buscar SKU, Cor ou NAV..." style="margin-left: auto; padding: 8px 15px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); outline: none;">
+        </div>
+
         <section class="section">
             <h2>Aging Stock - Visão Geral</h2>
             <div class="aging-summary">
                 <div class="aging-stat">
-                    <span class="aging-value">156</span>
+                    <span class="aging-value">{{ total_skus|default:"0" }}</span>
                     <span class="aging-label">SKUs em estoque</span>
                 </div>
                 <div class="aging-stat">
-                    <span class="aging-value">23</span>
+                    <span class="aging-value">{{ atencao|default:"0" }}</span>
                     <span class="aging-label">Atenção (+60 dias)</span>
                 </div>
                 <div class="aging-stat">
-                    <span class="aging-value" style="color: #ff6b6b;">5</span>
+                    <span class="aging-value" style="color: #ff6b6b;">{{ criticos|default:"0" }}</span>
                     <span class="aging-label">Críticos (+90 dias)</span>
                 </div>
             </div>
@@ -59,46 +75,32 @@
 
         <!-- Seção Dinâmica de Itens Críticos baseada nos Dados de ROI da Kyly -->
         <section class="section">
-            <h2>⚠️ Peças paradas há 90+ dias (Ação Recomendada)</h2>
+            <h2>⚠️ Peças paradas no Estoque (Ação Recomendada)</h2>
             <div class="aging-list">
-                
-                <div class="aging-item critical">
+                {% for item in itens_aging %}
+                <div class="aging-item {{ item.nivel }}" id="aging-row-{{ item.sku }}">
                     <div class="aging-info">
-                        <span class="aging-code">Ref 1000044</span>
-                        <span class="aging-name">Cor 11020 · Setor A05</span>
+                        <span class="aging-code">Ref {{ item.sku }}</span>
+                        <span class="aging-name" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; display: block;">Cor {{ item.cor }}</span>
+                        <div style="font-size: 11px; margin-top: 6px; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; border: 1px solid var(--border-color); color: var(--text-secondary); display: inline-block;">
+                            <span style="color: #d4af11;">NAV:</span> {{ item.endereco }}
+                        </div>
                     </div>
                     <div class="aging-details">
-                        <!-- Estilização aplicada com base no seu CSS para destacar criticidade -->
-                        <span class="aging-days" style="background: rgba(255,107,107,0.2); padding: 5px 10px; border-radius: 5px;">187 dias</span>
-                        <span class="aging-qty">12 un</span>
-                        <button class="btn-secondary" style="margin-left: 20px; font-size: 12px; color: #d4af11; border: 1px solid #d4af11; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Liquidar →</button>
+                        {% if item.nivel == 'critical' %}
+                        <span class="aging-days" style="background: rgba(255,107,107,0.2); padding: 5px 10px; border-radius: 5px;">{{ item.dias }} dias</span>
+                        {% elif item.nivel == 'warning' %}
+                        <span class="aging-days" style="background: rgba(212,175,55,0.2); padding: 5px 10px; border-radius: 5px;">{{ item.dias }} dias</span>
+                        {% else %}
+                        <span class="aging-days" style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 5px;">{{ item.dias }} dias</span>
+                        {% endif %}
+                        <span class="aging-qty">{{ item.qtd }} un</span>
+                        <button class="btn-secondary" onclick="abrirModalAging('{{ item.sku }}', 'Cor {{ item.cor }} · Endereço {{ item.endereco }}')" style="margin-left: 20px; font-size: 12px; color: #d4af11; border: 1px solid #d4af11; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Liquidar →</button>
                     </div>
                 </div>
-
-                <div class="aging-item critical">
-                    <div class="aging-info">
-                        <span class="aging-code">Ref 1000071</span>
-                        <span class="aging-name">Cor 00010 · Setor B02</span>
-                    </div>
-                    <div class="aging-details">
-                        <span class="aging-days" style="background: rgba(255,107,107,0.2); padding: 5px 10px; border-radius: 5px;">142 dias</span>
-                        <span class="aging-qty">8 un</span>
-                        <button class="btn-secondary" style="margin-left: 20px; font-size: 12px; color: #d4af11; border: 1px solid #d4af11; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Liquidar →</button>
-                    </div>
-                </div>
-
-                <div class="aging-item warning">
-                    <div class="aging-info">
-                        <span class="aging-code">Ref 1000088</span>
-                        <span class="aging-name">Cor 55012 · Setor C04</span>
-                    </div>
-                    <div class="aging-details">
-                        <span class="aging-days" style="background: rgba(212,175,55,0.2); padding: 5px 10px; border-radius: 5px;">121 dias</span>
-                        <span class="aging-qty">24 un</span>
-                        <button class="btn-secondary" style="margin-left: 20px; font-size: 12px; color: #d4af11; border: 1px solid #d4af11; background: transparent; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Liquidar →</button>
-                    </div>
-                </div>
-
+                {% empty %}
+                <div style="text-align: center; color: var(--text-secondary); padding: 20px;">Nenhum item pendente no estoque no momento.</div>
+                {% endfor %}
             </div>
         </section>
 
@@ -128,9 +130,202 @@
                 </div>
             </div>
         </section>
+        <!-- Seção de Histórico do Aging Stock -->
+        <section class="section" style="margin-top: 30px;">
+            <h2>📋 Histórico de Resoluções</h2>
+            <div class="exceptions-table-card" style="opacity: 0.9;">
+                <table class="exceptions-table" style="width: 100%; text-align: left; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-secondary);">
+                            <th style="padding: 10px;">Data/Hora</th>
+                            <th style="padding: 10px;">SKU / Setor</th>
+                            <th style="padding: 10px;">Ação / Status</th>
+                            <th style="padding: 10px;">Motivo / Comentário</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historicoAgingBody">
+                        <!-- Histórico dinâmico -->
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 10px; color: var(--text-primary);">16/05/2026 14:30</td>
+                            <td style="padding: 10px; color: var(--text-primary);"><strong>Ref 1000012</strong><br><small>Cor 00010 · Setor A01</small></td>
+                            <td style="padding: 10px;"><span style="color: #ef4444; font-weight: bold;">Removido (Baixa)</span></td>
+                            <td style="padding: 10px; color: var(--text-secondary);">Peças liquidadas do estoque via inventário.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </main>
+
+    <!-- MODAL LIQUIDAR AGING -->
+    <div class="master-code-overlay" id="modalLiquidarAging" aria-hidden="true" style="display: none; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 18, 32, 0.85); z-index: 9999;">
+        <section class="master-code-modal" role="dialog" aria-modal="true" style="background: var(--bg-secondary); padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid var(--border-color);">
+            <h2 style="color: #d4af11; margin-bottom: 15px; font-size: 20px;">Liquidar SKU <span id="agingSkuAlvo"></span></h2>
+            <p id="agingNomeAlvo" style="color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;"></p>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="color: var(--text-primary); font-size: 14px; font-weight: bold;">Ação a tomar:</label>
+                    <select id="acaoAging" style="padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; outline: none;" onchange="toggleSupervisorSelect()">
+                        <option value="REMOVIDO">Remover do Estoque (Baixa Manual)</option>
+                        <option value="ATRIBUIDO">Atribuir Verificação ao Supervisor</option>
+                    </select>
+                </div>
+                
+                <div id="divSupervisor" style="display: none; flex-direction: column; gap: 5px;">
+                    <label style="color: var(--text-primary); font-size: 14px; font-weight: bold;">Qual Supervisor?</label>
+                    <select id="supervisorAging" style="padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; outline: none;">
+                        {% for sup in supervisores %}
+                        <option value="{{ sup.id }}">{{ sup.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <label style="color: var(--text-primary); font-size: 14px; font-weight: bold;">Comentário/Motivo:</label>
+                    <textarea id="comentarioAging" placeholder="Descreva o motivo ou a instrução..." style="padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px; min-height: 80px; outline: none; font-family: inherit; resize: none;"></textarea>
+                </div>
+            </div>
+            
+            <div class="master-code-actions" style="display: flex; gap: 10px;">
+                <button class="master-code-btn cancel" onclick="fecharModalAging()" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #334155; color: white; cursor: pointer; font-weight: bold;">Cancelar</button>
+                <button class="master-code-btn confirm" onclick="confirmarAging()" style="flex: 1; padding: 12px; border-radius: 8px; border: none; background: #d4af11; color: #000; cursor: pointer; font-weight: bold;">Aplicar Ação</button>
+            </div>
+        </section>
+    </div>
 
     <!-- JavaScript padronizado do projeto (Controlador de Temas, Gráficos e Importações) -->
     <script src="{% static 'js/script.js' %}"></script>
+    <script>
+        let skuAtualAging = '';
+        let nomeAtualAging = '';
+
+        function abrirModalAging(sku, nome) {
+            skuAtualAging = sku;
+            nomeAtualAging = nome;
+            document.getElementById('agingSkuAlvo').innerText = sku;
+            document.getElementById('agingNomeAlvo').innerText = nome;
+            document.getElementById('comentarioAging').value = '';
+            document.getElementById('modalLiquidarAging').style.display = 'flex';
+        }
+
+        function fecharModalAging() {
+            document.getElementById('modalLiquidarAging').style.display = 'none';
+        }
+
+        function toggleSupervisorSelect() {
+            const acao = document.getElementById('acaoAging').value;
+            document.getElementById('divSupervisor').style.display = (acao === 'ATRIBUIDO') ? 'flex' : 'none';
+        }
+
+        async function confirmarAging() {
+            const acao = document.getElementById('acaoAging').value;
+            const com = document.getElementById('comentarioAging').value.trim();
+            const sup = document.getElementById('supervisorAging').value;
+            
+            if (!com) return alert("Por favor, adicione um comentário ou motivo.");
+
+            const payload = {
+                sku: skuAtualAging,
+                acao: acao,
+                motivo: com,
+                supervisor_id: acao === 'ATRIBUIDO' ? sup : null
+            };
+
+            try {
+                const res = await fetch('/api/aging-stock/resolver/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken') || ''
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const d = await res.json();
+                
+                if (d.status === 'sucesso') {
+                    // Remove a linha original
+                    const row = document.getElementById('aging-row-' + skuAtualAging);
+                    if (row) row.remove();
+
+                    // Adiciona no histórico localmente (simulação rápida)
+                    const dateStr = new Date().toLocaleString('pt-BR').substring(0, 16);
+                    let badgeHtml = acao === 'remover' 
+                        ? '<span style="color: #ef4444; font-weight: bold;">Removido (Baixa)</span>'
+                        : `<span style="color: #d4af11; font-weight: bold;">Atribuído (${sup})</span>`;
+
+                    const novaLinha = `
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="padding: 10px; color: var(--text-primary);">${dateStr}</td>
+                            <td style="padding: 10px; color: var(--text-primary);"><strong>Ref ${skuAtualAging}</strong><br><small>${nomeAtualAging}</small></td>
+                            <td style="padding: 10px;">${badgeHtml}</td>
+                            <td style="padding: 10px; color: var(--text-secondary);">${com}</td>
+                        </tr>
+                    `;
+                    document.getElementById('historicoAgingBody').insertAdjacentHTML('afterbegin', novaLinha);
+
+                    fecharModalAging();
+                    alert("Ação registrada com sucesso!");
+                } else {
+                    alert("Erro ao registrar: " + d.mensagem);
+                }
+            } catch(e) {
+                console.error("Erro no fetch:", e);
+                alert("Erro de conexão ao registrar ação: " + e.message);
+            }
+        }
+
+        // --- FILTROS COMPLETOS DO AGING STOCK ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const btns = document.querySelectorAll('.period-btn');
+            const searchInput = document.getElementById('agingSearch');
+            const rows = document.querySelectorAll('.aging-item');
+
+            function applyFilters() {
+                const activeBtn = document.querySelector('.period-btn.active');
+                const filterType = activeBtn ? activeBtn.getAttribute('data-filter') : 'todos';
+                const searchVal = searchInput ? searchInput.value.toLowerCase() : '';
+
+                rows.forEach(item => {
+                    const text = item.innerText.toLowerCase();
+                    let matchesFilter = true;
+
+                    if (filterType === 'setor_a') matchesFilter = text.includes('setor a');
+                    else if (filterType === 'setor_b') matchesFilter = text.includes('setor b');
+                    else if (filterType === 'setor_c') matchesFilter = text.includes('setor c');
+                    else if (filterType === 'critico') matchesFilter = text.includes('187 dias') || text.includes('142 dias') || text.includes('121 dias') || text.includes('+90') || item.classList.contains('critical'); 
+                    else if (filterType === 'atencao') matchesFilter = text.includes('75 dias') || text.includes('60 dias');
+
+                    const matchesSearch = text.includes(searchVal);
+
+                    if (matchesFilter && matchesSearch) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            }
+
+            btns.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    btns.forEach(b => {
+                        b.classList.remove('active');
+                        b.style.background = 'transparent';
+                        b.style.color = 'var(--text-primary)';
+                        b.style.border = '1px solid var(--border-color)';
+                    });
+                    btn.classList.add('active');
+                    btn.style.background = '#d4af11';
+                    btn.style.color = '#000';
+                    btn.style.border = 'none';
+                    applyFilters();
+                });
+            });
+
+            if (searchInput) {
+                searchInput.addEventListener('input', applyFilters);
+            }
+        });
+    </script>
 </body>
 </html>

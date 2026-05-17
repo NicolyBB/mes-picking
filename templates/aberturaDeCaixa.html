@@ -30,41 +30,41 @@
             <!-- STATUS DE COMUNICAÇÃO: Feedback AJAX visual -->
             <div id="status-comunicacao" style="margin-top: 10px; font-weight: bold; height: 20px; color: #d4af11;"></div>
 
-            <div class="lista-azul">
+            <div id="dados-pedido" class="lista-azul" style="display: none;">
                 <div class="lista-item cliente-item">
                     <span class="item-label">Cliente</span>
-                    <span class="item-value">MAGAZINE MIDORI LTDA</span>
+                    <span class="item-value" id="cliente-nome">MAGAZINE MIDORI LTDA</span>
                 </div>
                 <div class="lista-item row-item">
                     <div class="row-left">
                         <span class="item-label">Caixa</span>
-                        <span class="item-value">001</span>
+                        <span class="item-value" id="caixa-numero">001</span>
                     </div>
                     <div class="row-right">
                         <span class="item-label">Peso Bruto</span>
-                        <span class="item-value">13,818<span class="kg">kg</span></span>
+                        <span class="item-value" id="pedido-peso">13,818<span class="kg">kg</span></span>
                     </div>
                 </div>
                 <div class="lista-item stack-item">
                     <span class="item-label">Pedido</span>
-                    <span class="item-value">2657808</span>
+                    <span class="item-value" id="pedido-numero">2657808</span>
                 </div>
                 <div class="lista-item stack-item">
                     <span class="item-label">Total de peças</span>
-                    <span class="item-value">87 un</span>
+                    <span class="item-value" id="pedido-total">87 un</span>
                 </div>
             </div>
             
-            <div style="display: flex; flex-direction: column; gap: 15px; width: 100%; margin-top: 20px;">
+            <div id="acoes-pedido" style="display: flex; flex-direction: column; gap: 15px; width: 100%; margin-top: 20px;">
                 <!-- BOTÃO DA CÂMERA REAL -->
-                <button onclick="iniciarScannerCamera('codigoPapeleta')" class="btn-confirmar" style="background: #003366; color: #d4af11; border: 2px solid #d4af11;">
+                <button id="btn-camera" onclick="iniciarScannerCamera('codigoPapeleta')" class="btn-confirmar" style="background: #003366; color: #d4af11; border: 2px solid #d4af11;">
                     📷 Ler com Câmera Real
                 </button>
                 
                 <!-- BOTÃO CONFIRMAR (DJANGO): Avança para a tela principal de picking -->
-                <button onclick="window.location.href='{% url 'tela_picking' %}'" class="btn-confirmar">
+                <a id="btn-iniciar" href="{% url 'tela_picking' %}" class="btn-confirmar" style="text-decoration: none; display: none; align-items: center; justify-content: center;">
                     Confirmar / Iniciar Picking
-                </button>
+                </a>
             </div>
         </main>
         

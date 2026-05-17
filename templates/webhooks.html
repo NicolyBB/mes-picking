@@ -4,155 +4,269 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard MES - Configuração de Webhooks</title>
-    
-    <!-- Ícone e CSS gerenciados pelo motor do Django -->
+    <title>Dashboard MES — Webhooks</title>
     <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="dashboard-mes">
-    <header>
-        <div class="header-left">
-            <div class="logo-container">
-                <span class="logo-text">MES</span>
-                <span class="logo-subtitle">PICKING</span>
-            </div>
-            <!-- Imagem padronizada com a tag estática do Django -->
-            <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="kyly-logo">
-        </div>
-        <div class="header-right">
-            <button class="theme-toggle" id="themeToggle" title="Alternar tema">
-                <span class="theme-icon">🌙</span>
-            </button>
-            <span class="data-atual" id="dataAtual"></span>
-        </div>
-    </header>
-    
+<form style="display:none;">{% csrf_token %}</form>
+<header>
+    <div class="header-left">
+        <div class="logo-container"><span class="logo-text">MES</span><span class="logo-subtitle">PICKING</span></div>
+        <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="kyly-logo">
+    </div>
+    <div class="header-right">
+        <button class="theme-toggle" id="themeToggle" title="Tema"><span class="theme-icon">🌙</span></button>
+        <span class="data-atual" id="dataAtual"></span>
+    </div>
+</header>
+
     <!-- Menu de Navegação 100% Dinâmico com Rotas Django -->
     <nav class="nav-menu">
         <a href="{% url 'dashboard_kpis' %}" class="nav-item">KPIs Tempo Real</a>
-        <a href="{% url 'api_importar_excel' %}" class="nav-item">Importação</a>
         <a href="{% url 'aging_stock' %}" class="nav-item">Aging Stock</a>
-        <a href="{% url 'dashboard_funcionarios' %}" class="nav-item">Funcionários</a>
-        <a href="{% url 'dashboard_gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
-        <a href="{% url 'dashboard_webhooks' %}" class="nav-item active">Webhooks</a>
+        <a href="{% url 'painel_operacoes' %}" class="nav-item">Painel do Supervisor</a>
+        {% if perfil_usuario == 'ADM' %}
+        <a href="{% url 'importacao' %}" class="nav-item">Importação</a>
+        <a href="{% url 'funcionarios' %}" class="nav-item">Funcionários</a>
+        <a href="{% url 'gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
+        <a href="{% url 'webhooks' %}" class="nav-item active">Webhooks</a>
+        {% endif %}
     </nav>
 
-    <main class="dashboard">
-        
-        <!-- Cabeçalho com o botão de Cadastrar Novo Webhook -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-            <h2 style="color: var(--accent); margin: 0; text-transform: uppercase; letter-spacing: 1px;">📡 Webhooks de Alerta (IoT / APIs)</h2>
-            <button class="btn-primary" style="padding: 10px 20px; font-size: 14px; background: #28a745; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;" onclick="abrirModalWebhook()">
+<main class="dashboard">
+
+    <!-- Heartbeat Monitor -->
+    <section class="section" id="heartbeatSection">
+        <h2>💓 Monitor de Coletores (Heartbeat)</h2>
+        <div id="heartbeatGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:10px;">
+            <div style="color:var(--text-secondary);font-size:.9rem;">Carregando status dos coletores...</div>
+        </div>
+        <button onclick="carregarHeartbeat()" style="margin-top:16px;padding:8px 16px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);cursor:pointer;font-size:.85rem;">🔄 Atualizar</button>
+    </section>
+
+    <!-- Webhooks List -->
+    <section class="section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+            <h2 style="margin:0;">🔔 Webhooks de Alerta</h2>
+            <button onclick="abrirModalWebhook(null)"
+                style="padding:10px 20px;background:#28a745;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">
                 + Novo Webhook
             </button>
         </div>
 
-        <section class="section">
-            <h2>Integrações Ativas (Gatilhos do Sistema)</h2>
-            <div class="webhooks-list">
-                
-                <!-- Webhook 1: Telegram / Compras (Urgência de Reposição) -->
-                <div class="webhook-item">
-                    <div class="webhook-icon" style="color: #3498db; font-size: 28px;">✈️</div>
-                    <div class="webhook-info">
-                        <span class="webhook-name" style="font-size: 16px;">Compras — Telegram (Reposição)</span>
-                        <span class="webhook-url" style="font-family: monospace; color: var(--text-secondary);">https://api.telegram.org/bot.../sendMessage</span>
-                        <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
-                            Gatilho: <strong style="color: var(--accent);">FALTA_ESTOQUE</strong> · Threshold (Limite): <strong>3 consecutivas</strong>
-                        </div>
-                    </div>
-                    <span class="webhook-status active">Ativo</span>
-                    <!-- O botão lixo exibe a capacidade de exclusão do CRUD -->
-                    <button class="btn-icon" style="color: #ff6b6b; margin-left: 15px;">🗑️</button>
+        <div class="webhooks-list" id="webhooksList">
+            {% for wh in webhooks %}
+            <div class="webhook-item" id="wh-{{ wh.id }}">
+                <div class="webhook-icon" style="font-size:28px;">
+                    {% if wh.evento_gatilho == 'DEVICE_OFFLINE' %}⚠️{% elif wh.evento_gatilho == 'FALTA_PECA' %}🛒{% elif wh.evento_gatilho == 'AGING_STOCK' %}📦{% elif wh.evento_gatilho == 'PPH_BAIXO' %}📉{% else %}🔔{% endif %}
                 </div>
-
-                <!-- Webhook 2: Manutenção / TI (Heartbeat / Coletor Offline) -->
-                <div class="webhook-item">
-                    <div class="webhook-icon" style="color: #ff6b6b; font-size: 28px;">⚠️</div>
-                    <div class="webhook-info">
-                        <span class="webhook-name" style="font-size: 16px;">Suporte TI — E-mail (Manutenção)</span>
-                        <span class="webhook-url" style="font-family: monospace; color: var(--text-secondary);">mailto:manutencao-ti@kyly.com.br</span>
-                        <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
-                            Gatilho: <strong style="color: var(--accent);">DEVICE_OFFLINE</strong> · Threshold (Limite): <strong>Timeout > 5min</strong>
-                        </div>
-                    </div>
-                    <span class="webhook-status active">Ativo</span>
-                    <button class="btn-icon" style="color: #ff6b6b; margin-left: 15px;">🗑️</button>
-                </div>
-
-                <!-- Webhook 3: Aging Stock / ERP (Vendas e Promoção) -->
-                <div class="webhook-item" style="opacity: 0.7;">
-                    <div class="webhook-icon" style="color: #28a745; font-size: 28px;">💰</div>
-                    <div class="webhook-info">
-                        <span class="webhook-name" style="font-size: 16px;">Painel ERP — Logística Reversa</span>
-                        <span class="webhook-url" style="font-family: monospace; color: var(--text-secondary);">https://erp.kyly.com.br/api/aging-stock</span>
-                        <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
-                            Gatilho: <strong style="color: var(--accent);">AGING_STOCK_ALERT</strong> · Threshold (Limite): <strong>> 90 dias</strong>
-                        </div>
-                    </div>
-                    <span class="webhook-status inactive" style="background: rgba(255, 255, 255, 0.1); color: var(--text-secondary);">Inativo</span>
-                    <button class="btn-icon" style="color: #ff6b6b; margin-left: 15px;">🗑️</button>
-                </div>
-
-            </div>
-        </section>
-    </main>
-
-    <!-- Modal de Cadastro de Webhook -->
-    <div id="modal-webhook" class="modal-parcial" style="display: none; position: fixed; inset: 0; background: rgba(11, 18, 32, 0.9); z-index: 1000; align-items: center; justify-content: center;">
-        <div class="modal-conteudo" style="background: var(--bg-secondary); border: 1px solid var(--accent); padding: 30px; border-radius: 12px; width: 450px; text-align: left; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
-            <h3 style="color: var(--text-primary); margin-bottom: 20px;">Registrar Novo Webhook</h3>
-
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                    <label style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Nome do Alerta / Destino</label>
-                    <input type="text" placeholder="Ex: Bot Telegram Compras" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
-                </div>
-
-                <div class="form-group" style="display: flex; flex-direction: column; gap: 5px;">
-                    <label style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">URL do Endpoint (API Externa)</label>
-                    <input type="url" placeholder="https://api.exemplo.com/webhook" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
-                </div>
-
-                <div style="display: flex; gap: 15px;">
-                    <div class="form-group" style="display: flex; flex-direction: column; gap: 5px; flex: 2;">
-                        <label style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Evento Gatilho</label>
-                        <select style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
-                            <option value="FALTA_ESTOQUE">Falta de Peça no Endereço</option>
-                            <option value="DEVICE_OFFLINE">Coletor Offline (Heartbeat)</option>
-                            <option value="AGING_STOCK">Aging Stock (> 90 dias)</option>
-                            <option value="CAIXA_PARCIAL">Caixa Encerrada Parcialmente</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group" style="display: flex; flex-direction: column; gap: 5px; flex: 1;">
-                        <label style="color: var(--text-secondary); font-size: 12px; text-transform: uppercase;">Threshold (Limite)</label>
-                        <input type="number" placeholder="Ex: 3" value="3" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff; text-align: center;">
+                <div class="webhook-info">
+                    <span class="webhook-name">{{ wh.nome }}</span>
+                    <span class="webhook-url">{{ wh.url_destino }}</span>
+                    <div style="margin-top:6px;font-size:12px;color:var(--text-secondary);">
+                        Gatilho: <strong style="color:var(--accent);">{{ wh.evento_gatilho }}</strong>
+                        · Threshold: <strong>{{ wh.threshold }}</strong>
+                        {% if wh.ultimo_disparo %}· Último disparo: {{ wh.ultimo_disparo }}{% endif %}
                     </div>
                 </div>
-
-                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
-                    <button onclick="fecharModalWebhook()" style="padding: 10px 15px; background: transparent; color: #fff; border: 1px solid #fff; border-radius: 6px; cursor: pointer;">Cancelar</button>
-                    <!-- Na VM, este botão envia um POST para a API Django gravar na tabela WEBHOOK_CONFIG -->
-                    <button onclick="fecharModalWebhook()" style="padding: 10px 15px; background: #28a745; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Cadastrar</button>
+                <span class="webhook-status {% if wh.ativo %}active{% else %}inactive{% endif %}">
+                    {% if wh.ativo %}ATIVO{% else %}INATIVO{% endif %}
+                </span>
+                <div style="display:flex;gap:8px;margin-left:12px;">
+                    <button class="btn-icon" data-action="testar" data-id="{{ wh.id }}" title="Testar">🚀</button>
+                    <button class="btn-icon" data-action="editar-wh" data-id="{{ wh.id }}" title="Editar">✏️</button>
+                    <button class="btn-icon" data-action="excluir-wh" data-id="{{ wh.id }}" data-nome="{{ wh.nome|escapejs }}" style="color:#ef4444;" title="Excluir">🗑️</button>
                 </div>
             </div>
+            {% empty %}
+            <div id="emptyMsg" style="color:var(--text-secondary);padding:30px;text-align:center;">Nenhum webhook cadastrado. Clique em "+ Novo Webhook" para começar.</div>
+            {% endfor %}
+        </div>
+    </section>
+</main>
+
+<!-- MODAL WEBHOOK -->
+<div id="modalWebhook" style="display:none;position:fixed;inset:0;background:rgba(10,15,26,.85);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-secondary);border:1px solid var(--border-color);padding:32px;border-radius:16px;width:500px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+        <h3 id="whModalTitle" style="margin-bottom:24px;color:var(--text-primary);">Novo Webhook</h3>
+        <input type="hidden" id="whId">
+
+        <div style="display:flex;flex-direction:column;gap:14px;">
+            <div>
+                <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Nome do alerta</label>
+                <input id="whNome" type="text" placeholder="Ex: Bot Telegram Compras"
+                    style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;">
+            </div>
+            <div>
+                <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">URL de destino</label>
+                <input id="whUrl" type="url" placeholder="https://api.exemplo.com/webhook"
+                    style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;">
+            </div>
+            <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
+                <div>
+                    <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Evento gatilho</label>
+                    <select id="whEvento" style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);">
+                        <option value="FALTA_PECA">Falta de Peça no Endereço</option>
+                        <option value="DEVICE_OFFLINE">Coletor Offline (Heartbeat)</option>
+                        <option value="AGING_STOCK">Aging Stock (&gt; X dias)</option>
+                        <option value="CAIXA_PARCIAL">Caixa Encerrada Parcialmente</option>
+                        <option value="PPH_BAIXO">PPH abaixo da meta</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Threshold</label>
+                    <input id="whThreshold" type="number" value="3" min="1"
+                        style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;text-align:center;">
+                </div>
+            </div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--text-primary);">
+                <input type="checkbox" id="whAtivo" checked style="width:16px;height:16px;accent-color:var(--accent);">
+                Webhook ativo
+            </label>
+        </div>
+
+        <div id="whFeedback" style="display:none;margin-top:12px;padding:10px;border-radius:8px;font-size:.9rem;"></div>
+
+        <div style="display:flex;gap:12px;margin-top:24px;">
+            <button onclick="fecharModalWebhook()" style="flex:1;padding:14px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:10px;cursor:pointer;font-weight:600;">Cancelar</button>
+            <button id="whBtnSalvar" onclick="salvarWebhook()" style="flex:2;padding:14px;background:#28a745;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;">Cadastrar</button>
         </div>
     </div>
+</div>
 
-    <!-- JavaScript padronizado do projeto -->
-    <script src="{% static 'js/script.js' %}"></script>
-    
-    <!-- Mini-script para abrir/fechar o Modal de Cadastro -->
-    <script>
-        function abrirModalWebhook() {
-            document.getElementById('modal-webhook').style.display = 'flex';
+<script src="{% static 'js/script.js' %}"></script>
+<script>
+    function getCookie(n){let v=null;document.cookie.split(';').forEach(c=>{c=c.trim();if(c.startsWith(n+'='))v=decodeURIComponent(c.slice(n.length+1));});return v;}
+
+    // Event delegation para botoes dos webhooks
+    document.getElementById('webhooksList').addEventListener('click', e => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        if (action === 'testar') testarWebhook(id, btn);
+        if (action === 'editar-wh') abrirModalWebhook(id);
+        if (action === 'excluir-wh') excluirWebhook(id, btn.dataset.nome);
+    });
+
+
+    // ── Heartbeat Monitor ─────────────────────────────────────
+    async function carregarHeartbeat() {
+        try {
+            const res = await fetch('/api/heartbeat/status/');
+            const d = await res.json();
+            const grid = document.getElementById('heartbeatGrid');
+            if (!d.coletores || d.coletores.length === 0) {
+                grid.innerHTML = '<div style="color:var(--text-secondary);">Nenhum coletor registrado.</div>';
+                return;
+            }
+            grid.innerHTML = d.coletores.map(c => `
+                <div style="background:var(--bg-tertiary);border-radius:12px;padding:16px;border-left:4px solid ${c.status==='ONLINE'?'#10b981':c.status==='TIMEOUT'?'#d4af11':'#ef4444'};">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <strong style="color:var(--text-primary);font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65%;">💻 ${c.dispositivo_id}</strong>
+                        <span style="padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;
+                            background:${c.status==='ONLINE'?'rgba(16,185,129,.2)':c.status==='TIMEOUT'?'rgba(212,175,17,.2)':'rgba(239,68,68,.2)'};
+                            color:${c.status==='ONLINE'?'#10b981':c.status==='TIMEOUT'?'#d4af11':'#ef4444'};">
+                            ${c.status}
+                        </span>
+                    </div>
+                    <div style="font-size:.8rem;color:var(--text-secondary);">
+                        👤 ${c.usuario}<br>
+                        🕐 Último sinal: ${c.ultimo_sinal} (${c.minutos_atras}min atrás)<br>
+                        🌐 IP: ${c.ip}
+                    </div>
+                </div>`).join('');
+        } catch(e) {
+            document.getElementById('heartbeatGrid').innerHTML = '<div style="color:#ef4444;">Erro ao carregar status dos coletores.</div>';
         }
-        function fecharModalWebhook() {
-            document.getElementById('modal-webhook').style.display = 'none';
+    }
+    carregarHeartbeat();
+    setInterval(carregarHeartbeat, 30000);
+
+    // ── Webhooks ──────────────────────────────────────────────
+    async function abrirModalWebhook(id) {
+        document.getElementById('whId').value = id || '';
+        document.getElementById('whNome').value = '';
+        document.getElementById('whUrl').value = '';
+        document.getElementById('whEvento').value = 'FALTA_PECA';
+        document.getElementById('whThreshold').value = 3;
+        document.getElementById('whAtivo').checked = true;
+        document.getElementById('whFeedback').style.display = 'none';
+
+        if (id) {
+            document.getElementById('whModalTitle').textContent = 'Editar Webhook';
+            document.getElementById('whBtnSalvar').textContent = 'Salvar';
+            const res = await fetch(`/api/webhooks/${id}/`);
+            // não temos GET detalhe, recarregamos da lista
+        } else {
+            document.getElementById('whModalTitle').textContent = 'Novo Webhook';
+            document.getElementById('whBtnSalvar').textContent = 'Cadastrar';
         }
-    </script>
+        document.getElementById('modalWebhook').style.display = 'flex';
+    }
+
+    function fecharModalWebhook() {
+        document.getElementById('modalWebhook').style.display = 'none';
+    }
+
+    async function salvarWebhook() {
+        const id = document.getElementById('whId').value;
+        const payload = {
+            nome: document.getElementById('whNome').value.trim(),
+            url_destino: document.getElementById('whUrl').value.trim(),
+            evento_gatilho: document.getElementById('whEvento').value,
+            threshold: parseInt(document.getElementById('whThreshold').value) || 3,
+            ativo: document.getElementById('whAtivo').checked,
+        };
+        if (!payload.nome || !payload.url_destino) {
+            mostrarWhFeedback('Preencha nome e URL.', 'error'); return;
+        }
+        const url = id ? `/api/webhooks/${id}/` : '/api/webhooks/';
+        const method = id ? 'PUT' : 'POST';
+        try {
+            const res = await fetch(url, {
+                method, headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+                body: JSON.stringify(payload)
+            });
+            const d = await res.json();
+            if (d.status === 'sucesso') { fecharModalWebhook(); location.reload(); }
+            else mostrarWhFeedback(d.mensagem, 'error');
+        } catch(e) { mostrarWhFeedback('Erro de conexão.', 'error'); }
+    }
+
+    async function excluirWebhook(id, nome) {
+        if (!confirm(`Excluir webhook "${nome}"?`)) return;
+        const res = await fetch(`/api/webhooks/${id}/`, {
+            method: 'DELETE', headers: {'X-CSRFToken': getCookie('csrftoken')}
+        });
+        const d = await res.json();
+        if (d.status === 'sucesso') {
+            document.getElementById(`wh-${id}`)?.remove();
+        } else alert(d.mensagem);
+    }
+
+    async function testarWebhook(id, btn) {
+        const origText = btn ? btn.textContent : '';
+        if (btn) btn.textContent = '⏳';
+        try {
+            const res = await fetch(`/api/webhooks/${id}/testar/`, {
+                method: 'POST', headers: {'X-CSRFToken': getCookie('csrftoken')}
+            });
+            const d = await res.json();
+            if (btn) btn.textContent = d.status === 'sucesso' ? '✅' : '❌';
+            alert(d.mensagem);
+        } catch(e) { if (btn) btn.textContent = '❌'; alert('Erro ao testar.'); }
+        setTimeout(() => { if (btn) btn.textContent = origText || '🚀'; }, 3000);
+    }
+
+    function mostrarWhFeedback(msg, tipo) {
+        const el = document.getElementById('whFeedback');
+        el.textContent = msg; el.style.display = 'block';
+        el.style.background = tipo==='error'?'rgba(239,68,68,.15)':'rgba(16,185,129,.15)';
+        el.style.color = tipo==='error'?'#ef4444':'#10b981';
+        el.style.border = `1px solid ${tipo==='error'?'rgba(239,68,68,.4)':'rgba(16,185,129,.4)'}`;
+    }
+</script>
 </body>
 </html>

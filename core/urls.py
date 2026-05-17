@@ -16,8 +16,13 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path('admin/', admin.site.urls),
+    
+    # Aponta a raiz do site ('') para as urls do seu motor de picking ou autenticação
+    path('', include('picking_engine.urls')), 
+    path('auth/', include('authentication.urls')),
+    path('api/v1/', include('api_v1.urls')),
 ]

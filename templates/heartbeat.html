@@ -1,0 +1,764 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Dispositivos — KYLY MES</title>
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        /* ── Heartbeat page — scoped styles ── */
+        body.hb-page {
+            --bg-primary: #0a0f1a;
+            --bg-secondary: #0f1a2e;
+            --bg-tertiary: #1a2a4a;
+            --text-primary: #e8f0fe;
+            --text-secondary: #8892b0;
+            --accent: #d4af11;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --border-color: rgba(255, 255, 255, .08);
+            --card-bg: rgba(255, 255, 255, .04);
+            margin: 0;
+            padding: 0;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', system-ui, sans-serif;
+            min-height: 100vh;
+        }
+
+        body.hb-page[data-theme="light"] {
+            --bg-primary: #f1f5f9;
+            --bg-secondary: #fff;
+            --bg-tertiary: #e2e8f0;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: rgba(0, 0, 0, .08);
+            --card-bg: rgba(0, 0, 0, .03);
+        }
+
+        .hb-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .4);
+        }
+
+        .hb-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .hb-brand a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 22px;
+        }
+
+        .hb-brand a:hover {
+            color: var(--accent);
+        }
+
+        .hb-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .hb-subtitle {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .hb-body {
+            padding: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ── Summary cards ── */
+        .hb-summary {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .hb-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: border-color .2s, transform .2s;
+        }
+
+        .hb-card:hover {
+            border-color: rgba(212, 175, 17, .4);
+            transform: translateY(-2px);
+        }
+
+        .hb-card-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+        }
+
+        .hb-card-value {
+            font-size: 32px;
+            font-weight: 800;
+        }
+
+        .hb-card-value.green {
+            color: var(--success);
+        }
+
+        .hb-card-value.yellow {
+            color: var(--warning);
+        }
+
+        .hb-card-value.red {
+            color: var(--danger);
+        }
+
+        .hb-card-value.accent {
+            color: var(--accent);
+        }
+
+        /* ── Add device panel ── */
+        .hb-add-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px 24px;
+        }
+
+        .hb-add-panel h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+        }
+
+        .hb-form-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .hb-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .hb-field label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .hb-field input,
+        .hb-field select {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 9px 12px;
+            color: var(--text-primary);
+            font-size: 13px;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .hb-field input:focus,
+        .hb-field select:focus {
+            border-color: rgba(212, 175, 17, .5);
+        }
+
+        .hb-btn-add {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, var(--accent), #e6c120);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: transform .2s, box-shadow .2s;
+            box-shadow: 0 4px 15px rgba(212, 175, 17, .3);
+        }
+
+        .hb-btn-add:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(212, 175, 17, .5);
+        }
+
+        /* ── Device table ── */
+        .hb-table-wrap {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .hb-table-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .hb-table-header h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .hb-search {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 7px 12px;
+            flex: 1;
+            max-width: 280px;
+        }
+
+        .hb-search input {
+            background: none;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 13px;
+            width: 100%;
+        }
+
+        .hb-search input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .hb-btn-refresh {
+            padding: 8px 16px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: border-color .2s;
+        }
+
+        .hb-btn-refresh:hover {
+            border-color: rgba(212, 175, 17, .4);
+        }
+
+        table.hb-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        table.hb-table thead tr {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        table.hb-table th {
+            padding: 10px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            white-space: nowrap;
+        }
+
+        table.hb-table td {
+            padding: 12px 16px;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        table.hb-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        table.hb-table tbody tr:hover {
+            background: var(--card-bg);
+        }
+
+        .dev-id {
+            font-family: monospace;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .status-pill.online {
+            background: rgba(16, 185, 129, .15);
+            color: var(--success);
+        }
+
+        .status-pill.timeout {
+            background: rgba(245, 158, 11, .15);
+            color: var(--warning);
+        }
+
+        .status-pill.offline {
+            background: rgba(239, 68, 68, .15);
+            color: var(--danger);
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-dot.online {
+            background: var(--success);
+            animation: pulse-hb 1.8s infinite;
+        }
+
+        .status-dot.timeout {
+            background: var(--warning);
+        }
+
+        .status-dot.offline {
+            background: var(--danger);
+        }
+
+        @keyframes pulse-hb {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, .5)
+            }
+
+            50% {
+                box-shadow: 0 0 0 5px transparent
+            }
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #e6c120);
+            color: #000;
+            font-size: 11px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .user-avatar.anon {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .user-perfil {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .btn-del {
+            background: rgba(239, 68, 68, .12);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, .25);
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .btn-del:hover {
+            background: rgba(239, 68, 68, .3);
+            transform: scale(1.05);
+        }
+
+        .hb-empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .hb-ts {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* ── Toast ── */
+        #hbToast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity .3s;
+            max-width: 340px;
+        }
+
+        #hbToast.show {
+            opacity: 1;
+        }
+
+        #hbToast.success {
+            background: #10b981;
+            color: #fff;
+        }
+
+        #hbToast.error {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        @media(max-width:768px) {
+            .hb-summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .hb-form-row {
+                flex-direction: column;
+            }
+
+            table.hb-table th:nth-child(4),
+            table.hb-table td:nth-child(4) {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="hb-page">
+    {% csrf_token %}
+
+    <header class="hb-header">
+        <div class="hb-brand">
+            <a href="/dashboard/" title="Voltar">←</a>
+            <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" style="height:34px;">
+            <div>
+                <div class="hb-title">💻 Monitor de Dispositivos</div>
+                <div class="hb-subtitle">Heartbeat · Status em tempo real</div>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <button class="icon-btn" id="themeToggleHb" title="Modo Claro/Escuro" style="background: none; border: none; font-size: 20px; cursor: pointer;">🌙</button>
+            <span style="font-size:13px;color:var(--text-secondary);">{{ usuario_nome }}</span>
+            <a href="/dashboard/"
+                style="padding:8px 16px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-size:13px;font-weight:600;text-decoration:none;">←
+                Dashboard</a>
+        </div>
+    </header>
+
+    <div class="hb-body">
+
+        <!-- Summary Cards -->
+        <div class="hb-summary">
+            <div class="hb-card">
+                <div class="hb-card-label">Online</div>
+                <div class="hb-card-value green" id="cntOnline">—</div>
+            </div>
+            <div class="hb-card">
+                <div class="hb-card-label">Timeout (>5min)</div>
+                <div class="hb-card-value yellow" id="cntTimeout">—</div>
+            </div>
+            <div class="hb-card">
+                <div class="hb-card-label">Offline</div>
+                <div class="hb-card-value red" id="cntOffline">—</div>
+            </div>
+            <div class="hb-card">
+                <div class="hb-card-label">Total de Dispositivos</div>
+                <div class="hb-card-value accent" id="cntTotal">—</div>
+            </div>
+        </div>
+
+        <!-- Add Device Panel -->
+        <div class="hb-add-panel">
+            <h3>➕ Adicionar Dispositivo Manualmente</h3>
+            <div class="hb-form-row">
+                <div class="hb-field">
+                    <label>ID do Dispositivo *</label>
+                    <input type="text" id="newDevId" placeholder="ex: Coletor_Corredor_A">
+                </div>
+                <div class="hb-field">
+                    <label>Usuário Vinculado (opcional)</label>
+                    <select id="newDevUser">
+                        <option value="">— Nenhum —</option>
+                        {% for c in colaboradores %}
+                        <option value="{{ c.id }}">{{ c.nome }} ({{ c.perfil }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="hb-field">
+                    <label>IP Fixo (opcional)</label>
+                    <input type="text" id="newDevIp" placeholder="ex: 192.168.1.50">
+                </div>
+                <button class="hb-btn-add" onclick="adicionarDispositivo()">Cadastrar</button>
+            </div>
+        </div>
+
+        <!-- Device Table -->
+        <div class="hb-table-wrap">
+            <div class="hb-table-header">
+                <h3>📡 Dispositivos Registrados</h3>
+                <div class="hb-search">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="color:var(--text-secondary);flex-shrink:0;">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input type="text" id="searchDev" placeholder="Buscar dispositivo ou usuário..."
+                        oninput="filtrarTabela()">
+                </div>
+                <button class="hb-btn-refresh" onclick="carregarDispositivos()">🔄 Atualizar</button>
+            </div>
+            <table class="hb-table">
+                <thead>
+                    <tr>
+                        <th>Dispositivo</th>
+                        <th>Status</th>
+                        <th>Usuário</th>
+                        <th>IP</th>
+                        <th>Último Sinal</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="devTableBody">
+                    <tr>
+                        <td colspan="6" class="hb-empty">Carregando...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <div id="hbToast"></div>
+
+    <script>
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        let todosDispositivos = [];
+
+        function showToast(msg, type = 'success') {
+            const el = document.getElementById('hbToast');
+            el.textContent = msg;
+            el.className = `show ${type}`;
+            setTimeout(() => el.className = '', 3500);
+        }
+
+        async function carregarDispositivos() {
+            try {
+                const res = await fetch('/api/heartbeat/status/');
+                if (!res.ok) { showToast('Erro ao carregar dispositivos.', 'error'); return; }
+                const data = await res.json();
+
+                todosDispositivos = data.coletores || [];
+
+                document.getElementById('cntOnline').textContent = data.online ?? 0;
+                document.getElementById('cntTimeout').textContent = data.timeout ?? 0;
+                document.getElementById('cntOffline').textContent = data.offline ?? 0;
+                document.getElementById('cntTotal').textContent = data.total ?? 0;
+
+                renderTabela(todosDispositivos);
+            } catch (e) {
+                showToast('Falha na conexão com o servidor.', 'error');
+            }
+        }
+
+        function renderTabela(lista) {
+            const tbody = document.getElementById('devTableBody');
+            if (lista.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="hb-empty">Nenhum dispositivo registrado.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = lista.map(d => {
+                const statusCls = d.status.toLowerCase() === 'online' ? 'online'
+                    : d.status.toLowerCase() === 'timeout' ? 'timeout' : 'offline';
+                const statusLabel = d.status === 'ONLINE' ? 'Online'
+                    : d.status === 'TIMEOUT' ? 'Timeout' : 'Offline';
+
+                const ini = d.usuario && d.usuario !== '—'
+                    ? d.usuario.split(' ').map(n => n[0]).slice(0, 2).join('')
+                    : '?';
+                const avatarCls = d.usuario && d.usuario !== '—' ? '' : 'anon';
+                const perfil = d.usuario_perfil ? `<div class="user-perfil">${d.usuario_perfil}</div>` : '';
+
+                const tempoLabel = d.minutos_atras === 0 ? 'Agora' : `${d.minutos_atras}min atrás`;
+
+                return `<tr id="row-${d.dispositivo_id.replace(/[^a-z0-9]/gi, '_')}">
+                <td><span class="dev-id" style="display:inline-block; max-width:180px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom;" title="${d.dispositivo_id}">${d.dispositivo_id}</span></td>
+                <td>
+                    <span class="status-pill ${statusCls}">
+                        <span class="status-dot ${statusCls}"></span>
+                        ${statusLabel}
+                    </span>
+                </td>
+                <td>
+                    <div class="user-chip">
+                        <div class="user-avatar ${avatarCls}">${ini}</div>
+                        <div>
+                            <div class="user-name">${d.usuario}</div>
+                            ${perfil}
+                        </div>
+                    </div>
+                </td>
+                <td class="hb-ts">${d.ip || '—'}</td>
+                <td class="hb-ts">${d.ultimo_sinal_data || ''} ${d.ultimo_sinal}<br>${tempoLabel}</td>
+                <td>
+                    <button class="btn-del" onclick="removerDispositivo('${d.dispositivo_id}')">Remover</button>
+                </td>
+            </tr>`;
+            }).join('');
+        }
+
+        function filtrarTabela() {
+            const term = document.getElementById('searchDev').value.toLowerCase();
+            const filtrado = todosDispositivos.filter(d =>
+                d.dispositivo_id.toLowerCase().includes(term) ||
+                d.usuario.toLowerCase().includes(term) ||
+                (d.ip || '').toLowerCase().includes(term)
+            );
+            renderTabela(filtrado);
+        }
+
+        async function adicionarDispositivo() {
+            const devId = document.getElementById('newDevId').value.trim();
+            const userId = document.getElementById('newDevUser').value;
+            const ip = document.getElementById('newDevIp').value.trim();
+
+            if (!devId) { showToast('Informe o ID do dispositivo.', 'error'); return; }
+
+            const body = { dispositivo_id: devId };
+            if (userId) body.usuario_id = parseInt(userId);
+            if (ip) body.ip = ip;
+
+            try {
+                const res = await fetch('/api/heartbeat/manage/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'sucesso') {
+                    showToast(`✅ ${data.mensagem}`, 'success');
+                    document.getElementById('newDevId').value = '';
+                    document.getElementById('newDevUser').value = '';
+                    document.getElementById('newDevIp').value = '';
+                    carregarDispositivos();
+                } else {
+                    showToast(data.mensagem || 'Erro ao cadastrar.', 'error');
+                }
+            } catch (e) {
+                showToast('Falha na conexão.', 'error');
+            }
+        }
+
+        async function removerDispositivo(devId) {
+            if (!confirm(`Remover "${devId}" do monitoramento?`)) return;
+            try {
+                const res = await fetch('/api/heartbeat/manage/', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                    body: JSON.stringify({ dispositivo_id: devId })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'sucesso') {
+                    showToast(`🗑️ ${data.mensagem}`, 'success');
+                    carregarDispositivos();
+                } else {
+                    showToast(data.mensagem || 'Erro ao remover.', 'error');
+                }
+            } catch (e) {
+                showToast('Falha na conexão.', 'error');
+            }
+        }
+
+        // Load on start + auto-refresh every 15s (only when tab is active)
+        carregarDispositivos();
+        setInterval(() => { if (!document.hidden) carregarDispositivos(); }, 15000);
+
+        // Theme Toggle Logic
+        const btnTheme = document.getElementById('themeToggleHb');
+        const savedTheme = localStorage.getItem('themeHb') || 'dark';
+        if (savedTheme === 'light') {
+            document.body.setAttribute('data-theme', 'light');
+            btnTheme.textContent = '☀️';
+        }
+        
+        btnTheme.addEventListener('click', () => {
+            const current = document.body.getAttribute('data-theme');
+            if (current === 'light') {
+                document.body.removeAttribute('data-theme');
+                btnTheme.textContent = '🌙';
+                localStorage.setItem('themeHb', 'dark');
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                btnTheme.textContent = '☀️';
+                localStorage.setItem('themeHb', 'light');
+            }
+        });
+    </script>
+</body>
+
+</html>

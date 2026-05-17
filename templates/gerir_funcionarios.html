@@ -1,0 +1,123 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Colaboradores - MES PICKING</title>
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #0b1220; color: #fff; display: flex; min-height: 100vh; }
+        
+        /* Sidebar lateral (Menu Adm) */
+        .sidebar { width: 260px; background: rgba(15, 23, 42, 0.95); border-right: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; padding: 20px 0; }
+        .sidebar-header { padding: 0 20px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); margin-bottom: 20px; }
+        .sidebar-header h2 { color: #d4af11; font-size: 1.2rem; letter-spacing: 2px; }
+        .sidebar-nav { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+        .nav-item { padding: 15px 20px; color: #8892b0; text-decoration: none; transition: 0.2s; display: flex; align-items: center; gap: 12px; font-weight: 500; }
+        .nav-item:hover, .nav-item.active { background: rgba(212, 175, 17, 0.1); color: #d4af11; border-right: 3px solid #d4af11; }
+        
+        /* Área Principal */
+        .main { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; }
+        .topbar { height: 70px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; padding: 0 40px; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 10; }
+        
+        .content { padding: 40px; }
+        .page-title { font-size: 1.8rem; margin-bottom: 30px; font-weight: 600; color: #ccd6f6; display: flex; justify-content: space-between; align-items: center; }
+        .btn-add { background: #10b981; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-add:hover { background: #059669; }
+
+        /* Tabela */
+        .table-container { background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; overflow: hidden; backdrop-filter: blur(5px); }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 15px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        th { background: rgba(0,0,0,0.2); color: #8892b0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover { background: rgba(255,255,255,0.02); }
+        
+        .badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: inline-block; }
+        .badge-adm { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-supervisor { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge-colaborador { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+        
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .status-on { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+        .status-off { background: #64748b; }
+
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>MES ADMIN</h2>
+            <span style="color: #8892b0; font-size: 0.8rem;">Painel de Supervisão</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="{% url 'dashboard_kpis' %}" class="nav-item">📊 Performance KPI</a>
+            <a href="{% url 'funcionarios' %}" class="nav-item active">👥 Colaboradores</a>
+            <a href="{% url 'webhooks' %}" class="nav-item">⚙️ Integração (Webhooks)</a>
+            <hr style="border-color: rgba(255,255,255,0.05); margin: 10px 20px;">
+            <a href="{% url 'login_coletor' %}" class="nav-item" style="color: #ef4444;">← Voltar ao Retaguarda</a>
+        </nav>
+    </aside>
+
+    <!-- CONTENT -->
+    <main class="main">
+        <header class="topbar">
+            <div>Planta Logística: <strong>Setor A (Moda)</strong></div>
+            <div style="font-size: 0.9rem; color: #8892b0;">Módulo de RH Industrial</div>
+        </header>
+
+        <div class="content">
+            <h1 class="page-title">
+                Quadros e Funções
+                <button class="btn-add">+ Novo Colaborador</button>
+            </h1>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome Completo</th>
+                            <th>Crachá (Código)</th>
+                            <th>Nível de Acesso</th>
+                            <th>Status de Sessão</th>
+                            <th>Data de Cadastro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for func in funcionarios %}
+                        <tr>
+                            <td style="font-weight: 500;">{{ func.nome }}</td>
+                            <td style="font-family: monospace; color: #d4af11;">{{ func.cracha }}</td>
+                            <td>
+                                {% if func.perfil == 'ADM' %}<span class="badge badge-adm">COORDENADOR</span>
+                                {% elif func.perfil == 'SUPERVISOR' %}<span class="badge badge-supervisor">SUPERVISOR</span>
+                                {% else %}<span class="badge badge-colaborador">OPERADOR</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if func.login_status %}
+                                    <span class="status-dot status-on"></span> Em Turno
+                                {% else %}
+                                    <span class="status-dot status-off"></span> Offline
+                                {% endif %}
+                            </td>
+                            <td style="color: #8892b0;">{{ func.data_cadastro|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #8892b0;">Nenhum funcionário cadastrado no banco de dados.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </main>
+
+</body>
+</html>

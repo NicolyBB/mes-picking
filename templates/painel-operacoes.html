@@ -1,25 +1,30 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel de Operações SUPERVISOR KYLY MES</title>
-    
+
     <!-- Ícone e CSS gerenciados pelo motor do Django -->
     <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
-<body class="supervisor-mes">
-    <header class="page-header">
+
+<body class="pnl-pick">
+{% csrf_token %}
+    <header class="page-header"
+        style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); padding: 15px 20px;">
         <div class="header-main">
             <div class="brand-area">
                 <!-- Botão voltar conectado à rota dinâmica do Django -->
-                <button class="back-button" id="backButton" onclick="window.location.href='{% url 'login_supervisor' %}'" type="button" aria-label="Voltar">
+                <a href="/" class="back-button" id="backButton" aria-label="Voltar"
+                    style="display: flex; align-items: center; justify-content: center; text-decoration: none;">
                     <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M19 12H5m6-7-7 7 7 7"/>
+                        <path d="M19 12H5m6-7-7 7 7 7" />
                     </svg>
-                </button>
+                </a>
                 <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="supervisor-logo">
                 <div class="title-group">
                     <span class="product-name">SUPERVISOR KYLY MES</span>
@@ -32,15 +37,22 @@
                 </button>
                 <div class="header-metrics">
                     <div class="header-metric"><span>Operadores</span><strong id="operadoresAtivos">4/6</strong></div>
-                    <div class="header-metric header-metric-alert"><span>Exceções</span><strong id="excecoes">3</strong></div>
+                    <div class="header-metric header-metric-alert"><span>Exceções</span><strong id="excecoes">3</strong>
+                    </div>
                     <div class="header-metric"><span>PPH Médio</span><strong id="pphMedio">105</strong></div>
                 </div>
             </div>
         </div>
         <nav class="tab-bar">
             <!-- Abas de Navegação do Supervisor -->
-            <button class="tab-button active" type="button" data-tab="equipe" onclick="mudarAba('equipe')"><span>Equipe</span></button>
-            <button class="tab-button" type="button" data-tab="excecoes" onclick="mudarAba('excecoes')"><span>Exceções</span><span class="tab-badge" id="badgeExcecoes">3</span></button>
+            <button class="tab-button active" type="button" data-tab="equipe" onclick="mudarAba('equipe')"
+                style="color: var(--text-primary); border: 1px solid var(--border-color); background: var(--bg-secondary);"><span>Equipe</span></button>
+            <button class="tab-button" type="button" data-tab="excecoes" onclick="mudarAba('excecoes')"
+                style="color: var(--text-primary); border: 1px solid var(--border-color); background: var(--bg-secondary);"><span>Exceções</span><span
+                    class="tab-badge" id="badgeExcecoes">3</span></button>
+            <button class="tab-button" type="button" data-tab="aging" onclick="mudarAba('aging')"
+                style="color: var(--text-primary); border: 1px solid var(--border-color); background: var(--bg-secondary);"><span>Aging
+                    Stock</span><span class="tab-badge" id="badgeAging" style="background:#d4af11;">1</span></button>
         </nav>
     </header>
 
@@ -49,90 +61,52 @@
         <section class="tab-content active" id="tab-equipe">
             <section class="metrics-grid">
                 <article class="metric-card">
-                    <div class="metric-top"><span>Caixas</span></div>
-                    <strong>287</strong>
-                    <small class="positive">+12 vs. ontem</small>
+                    <div class="metric-top"><span>Caixas Hoje</span></div>
+                    <strong id="svCaixas">—</strong>
+                    <small class="positive" id="svCaixasDelta">carregando...</small>
                 </article>
                 <article class="metric-card">
                     <div class="metric-top"><span>Lead Time Médio</span></div>
-                    <strong>11.4 min</strong>
+                    <strong id="svLeadTime">—</strong>
                     <small class="positive">vs. meta 12 min</small>
                 </article>
                 <article class="metric-card">
                     <div class="metric-top"><span>PPH Equipe</span></div>
-                    <strong>105</strong>
+                    <strong id="svPPH">—</strong>
                     <small class="warning">meta 130</small>
                 </article>
                 <article class="metric-card">
                     <div class="metric-top"><span>Acurácia</span></div>
-                    <strong>99.2%</strong>
-                    <small class="positive">erro &lt; 1%</small>
+                    <strong id="svAcuracia">—</strong>
+                    <small id="svAcuraciaLabel" class="positive">carregando...</small>
                 </article>
             </section>
 
             <!-- Barra de Busca -->
             <div class="search-row">
                 <div class="search-box">
-                    <svg width="18" height="18" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
-                    <input type="text" placeholder="Buscar por crachá, nome ou caixa...">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" id="searchOperador" placeholder="Buscar por crachá, nome ou setor..." oninput="filtrarOperadores(this.value)">
                 </div>
+                {% if perfil_usuario == 'ADM' %}
+                <a href="{% url 'heartbeat_monitor' %}" style="padding:10px 18px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;display:flex;align-items:center;gap:6px;">
+                    💻 Dispositivos
+                </a>
+                {% endif %}
             </div>
 
-            <!-- Grade de Operadores Ativos -->
-            <div class="operators-grid">
-                <article class="operator-card">
-                    <header class="operator-header">
-                        <div class="operator-left">
-                            <div class="status-dot"></div>
-                            <div>
-                                <h3 class="operator-name">Carla Mendes</h3>
-                                <div class="operator-meta">K-1042 · Corredor A02</div>
-                            </div>
-                        </div>
-                        <svg class="operator-signal" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"></path></svg>
-                    </header>
-                    <div class="operator-stats">
-                        <div class="stat-block"><span class="stat-label">PPH</span><strong class="stat-value">142</strong></div>
-                        <div class="stat-block"><span class="stat-label">CAIXA</span><strong class="stat-value">06772401</strong></div>
-                        <div class="stat-block"><span class="stat-label">SINAL</span><strong class="stat-value">agora</strong></div>
-                    </div>
-                </article>
-                
-                <article class="operator-card">
-                    <header class="operator-header">
-                        <div class="operator-left">
-                            <div class="status-dot idle"></div>
-                            <div>
-                                <h3 class="operator-name">Bruno Lima</h3>
-                                <div class="operator-meta">K-1188 · Corredor B07</div>
-                            </div>
-                        </div>
-                        <svg class="operator-signal" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"></path></svg>
-                    </header>
-                    <div class="operator-stats">
-                        <div class="stat-block"><span class="stat-label">PPH</span><strong class="stat-value">128</strong></div>
-                        <div class="stat-block"><span class="stat-label">CAIXA</span><strong class="stat-value">06772419</strong></div>
-                        <div class="stat-block"><span class="stat-label">SINAL</span><strong class="stat-value">12s</strong></div>
-                    </div>
-                </article>
+            <div class="operators-grid" id="operatorsGrid" data-real-api="true">
+                <!-- Preenchido via API real dinamicamente -->
+            </div>
 
-                <article class="operator-card">
-                    <header class="operator-header">
-                        <div class="operator-left">
-                            <div class="status-dot error"></div>
-                            <div>
-                                <h3 class="operator-name">Renata Cruz</h3>
-                                <div class="operator-meta">K-1345 · Corredor A05</div>
-                            </div>
-                        </div>
-                        <svg class="operator-signal error" viewBox="0 0 24 24"><path d="M12 2v20M17 7l-10 10M7 7l10 10"></path></svg>
-                    </header>
-                    <div class="operator-stats">
-                        <div class="stat-block"><span class="stat-label">PPH</span><strong class="stat-value">156</strong></div>
-                        <div class="stat-block"><span class="stat-label">CAIXA</span><strong class="stat-value">06772441</strong></div>
-                        <div class="stat-block"><span class="stat-label">SINAL</span><strong class="stat-value">agora</strong></div>
-                    </div>
-                </article>
+            <div style="margin-top: 20px; text-align: right;">
+                <button onclick="abrirHistoricoEquipe()"
+                    style="padding:10px 20px;background:#334155;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">
+                    📋 Ver Histórico Geral da Equipe (Logs)
+                </button>
             </div>
         </section>
 
@@ -150,29 +124,100 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr class="exception-row">
+                        <tr class="exception-row" id="row-EX-9981">
                             <td class="exception-id">EX-9981</td>
                             <td class="exception-operator"><strong>Bruno Lima</strong><small>há 1 min</small></td>
                             <td><span class="exception-type skip">Pular SKU</span></td>
                             <td class="exception-reason">Falta de peça no endereço B07.04.2A</td>
-                            <td><button class="authorize-btn" onclick="abrirMasterCode('EX-9981')">Autorizar</button></td>
+                            <td>
+                                <button class="authorize-btn" onclick="abrirMasterCode('EX-9981')">Autorizar</button>
+                                <button class="deny-btn" onclick="abrirMotivoNegacao('EX-9981')"
+                                    style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; margin-left:4px; cursor:pointer;">Negar</button>
+                            </td>
                         </tr>
-                        <tr class="exception-row">
+                        <tr class="exception-row" id="row-EX-9979">
                             <td class="exception-id">EX-9979</td>
                             <td class="exception-operator"><strong>Patrícia Souza</strong><small>há 4 min</small></td>
                             <td><span class="exception-type balance">Saldo Zero</span></td>
                             <td class="exception-reason">Ref 1000044 sem saldo físico</td>
-                            <td><button class="authorize-btn" onclick="abrirMasterCode('EX-9979')">Autorizar</button></td>
+                            <td>
+                                <button class="authorize-btn" onclick="abrirMasterCode('EX-9979')">Autorizar</button>
+                                <button class="deny-btn" onclick="abrirMotivoNegacao('EX-9979')"
+                                    style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; margin-left:4px; cursor:pointer;">Negar</button>
+                            </td>
                         </tr>
-                        <tr class="exception-row">
+                        <tr class="exception-row" id="row-EX-9975">
                             <td class="exception-id">EX-9975</td>
                             <td class="exception-operator"><strong>Renata Cruz</strong><small>há 9 min</small></td>
                             <td><span class="exception-type damage">Peça Danificada</span></td>
                             <td class="exception-reason">Ref 1000022 — costura aberta</td>
-                            <td><button class="authorize-btn" onclick="abrirMasterCode('EX-9975')">Autorizar</button></td>
+                            <td>
+                                <button class="authorize-btn" onclick="abrirMasterCode('EX-9975')">Autorizar</button>
+                                <button class="deny-btn" onclick="abrirMotivoNegacao('EX-9975')"
+                                    style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; margin-left:4px; cursor:pointer;">Negar</button>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <div style="margin-top:20px;">
+                <h3 style="color:var(--text-primary); margin-bottom:10px;">📋 Histórico de Exceções Tratadas</h3>
+                <div class="exceptions-table-card" style="opacity: 0.8;">
+                    <table class="exceptions-table">
+                        <tbody id="historicoExcecoesBody">
+                            <!-- Preenchido via JS dinamicamente -->
+                            <tr class="exception-row">
+                                <td class="exception-id" style="color: #64748b;">EX-9970</td>
+                                <td class="exception-operator"><strong>Carla Mendes</strong><small>há 12 min</small>
+                                </td>
+                                <td><span class="exception-type skip">Pular SKU</span></td>
+                                <td>Falta de espaço na caixa</td>
+                                <td><span style="color: #10b981; font-weight: bold;">Autorizado por SUP-001</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ABA 3: AGING STOCK (SUPERVISOR) -->
+        <section class="tab-content" id="tab-aging" style="display: none;">
+            <div class="exceptions-table-card">
+                <h3 style="color:var(--text-primary); margin-bottom: 15px;">Ações Pendentes de Aging Stock (Atribuídas
+                    por ADM)</h3>
+                <table class="exceptions-table">
+                    <thead>
+                        <tr>
+                            <th class="exception-col-id">SKU</th>
+                            <th class="exception-col-operator">Setor</th>
+                            <th class="exception-col-type">Mensagem do ADM</th>
+                            <th class="exception-col-action">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="agingSupervisorBody">
+                        <tr class="exception-row" id="aging-sup-1">
+                            <td class="exception-id">Ref 1000044</td>
+                            <td class="exception-operator"><strong>Cor 11020</strong><small>Setor A05</small></td>
+                            <td>Liquidar este lote urgentemente.</td>
+                            <td>
+                                <button class="authorize-btn"
+                                    onclick="resolverAgingSupervisor('aging-sup-1')">Resolvido</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top:20px;">
+                <h3 style="color:var(--text-primary); margin-bottom:10px;">📋 Histórico de Aging Resolvido</h3>
+                <div class="exceptions-table-card" style="opacity: 0.8;">
+                    <table class="exceptions-table">
+                        <tbody id="historicoAgingBody">
+                            <!-- Preenchido via JS dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </section>
     </main>
@@ -182,16 +227,19 @@
         <section class="master-code-modal" role="dialog" aria-modal="true" aria-labelledby="masterCodeTitle">
             <div class="master-code-heading">
                 <div class="master-code-icon">
-                    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
                 </div>
                 <h2 id="masterCodeTitle">Liberação de Master Code</h2>
             </div>
-            
-            <p class="master-code-copy">Bipe seu crachá para autorizar a exceção <strong id="excecaoAlvo">EX-0000</strong>. O <code>supervisor_id</code> será gravado de forma segura na tabela <strong>LOG_BIPAGEM</strong>.</p>
-            
-            <!-- Input oculto com autofocus para garantir leitura direta via Laser no Datalogic -->
-            <input type="text" id="codigoSupervisorExcecao" class="master-code-input" placeholder="Aguardando crachá supervisor..." autofocus autocomplete="off">
-            
+
+            <p class="master-code-copy">Bipe seu crachá para autorizar a exceção <strong
+                    id="excecaoAlvo">EX-0000</strong>.</p>
+
+            <input type="text" id="codigoSupervisorExcecao" class="master-code-input"
+                placeholder="Aguardando crachá supervisor..." autofocus autocomplete="off">
+
             <div class="master-code-actions">
                 <button class="master-code-btn cancel" onclick="fecharMasterCode()">Cancelar</button>
                 <button class="master-code-btn confirm" onclick="confirmarMasterCode()">Confirmar</button>
@@ -199,25 +247,266 @@
         </section>
     </div>
 
+    <!-- MODAL DE MOTIVO DE NEGAÇÃO -->
+    <div class="master-code-overlay" id="modalNegacao" aria-hidden="true">
+        <section class="master-code-modal" role="dialog" aria-modal="true" style="border: 1px solid #ef4444;">
+            <div class="master-code-heading">
+                <div class="master-code-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"></path>
+                    </svg>
+                </div>
+                <h2 style="color: #ef4444;">Negar Exceção</h2>
+            </div>
+            <p class="master-code-copy">Informe o motivo para negar a exceção <strong id="excecaoNegarAlvo"></strong>.
+            </p>
+
+            <input type="text" id="motivoNegacao" class="master-code-input"
+                placeholder="Ex: Estoque disponível na doca..." style="margin-bottom: 15px;" autocomplete="off">
+            <input type="text" id="crachaNegacao" class="master-code-input" placeholder="Bipe seu crachá..."
+                autocomplete="off">
+
+            <div class="master-code-actions">
+                <button class="master-code-btn cancel" onclick="fecharModalNegacao()">Cancelar</button>
+                <button class="master-code-btn" style="background: #ef4444; color: white;"
+                    onclick="confirmarNegacao()">Negar Exceção</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- MODAL DO SCANNER DE CÂMERA COMPARTILHADO -->
+    <div id="scanner-modal" class="master-code-overlay" aria-hidden="true" style="display: none; z-index: 10000;">
+        <section class="master-code-modal" role="dialog" aria-modal="true" style="max-width: 350px;">
+            <h2 style="color: #d4af11; margin-bottom: 10px;">Câmera Ativada</h2>
+            <div id="reader"
+                style="width: 100%; min-height: 250px; background: #000; margin-bottom: 15px; border-radius: 8px; overflow: hidden;">
+            </div>
+            <button onclick="fecharScannerCameraSup()" class="master-code-btn cancel" style="width: 100%;">Cancelar
+                Câmera</button>
+        </section>
+    </div>
+
+    <!-- MODAL DE HISTÓRICO DA EQUIPE -->
+    <div id="modalHistoricoEquipe" class="master-code-overlay" aria-hidden="true"
+        style="display: none; justify-content: center; align-items: center; z-index: 10000;">
+        <section class="master-code-modal" role="dialog" aria-modal="true"
+            style="max-width: 650px; background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 25px; border-radius: 12px; width: 90%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3 style="color:var(--text-primary); margin:0;">📋 Histórico da Equipe (Logs)</h3>
+                <button onclick="fecharHistoricoEquipe()"
+                    style="background:transparent; border:none; color:var(--text-secondary); font-size:20px; cursor:pointer;">&times;</button>
+            </div>
+
+            <input type="text" id="filtroHistEquipe" placeholder="Filtrar por nome, ação ou data..."
+                oninput="filtrarHistEquipe()"
+                style="width:100%;padding:10px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:6px;color:var(--text-primary);margin-bottom:15px;outline:none;">
+
+            <div style="max-height: 300px; overflow-y: auto;">
+                <table
+                    style="width:100%;border-collapse:collapse;font-size:13px;color:var(--text-primary); text-align:left;">
+                    <thead>
+                        <tr style="border-bottom:1px solid var(--border-color);color:var(--text-secondary);">
+                            <th style="padding:8px;">Data/Hora</th>
+                            <th style="padding:8px;">Funcionário</th>
+                            <th style="padding:8px;">Ação / Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="histEquipeBody">
+                        <tr style="border-bottom:1px solid var(--border-color);" class="hist-eq-row">
+                            <td style="padding:8px;">16/05/2026 14:10</td>
+                            <td style="padding:8px;">João Silva</td>
+                            <td style="padding:8px;"><span style="color:#d4af11;">Atribuído a esta equipe (pelo
+                                    ADM)</span></td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border-color);" class="hist-eq-row">
+                            <td style="padding:8px;">15/05/2026 17:30</td>
+                            <td style="padding:8px;">Maria Santos</td>
+                            <td style="padding:8px;"><span style="color:#ef4444;">Demitido / Removido da Equipe</span>
+                            </td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border-color);" class="hist-eq-row">
+                            <td style="padding:8px;">15/05/2026 10:00</td>
+                            <td style="padding:8px;">Renata Cruz</td>
+                            <td style="padding:8px;"><span style="color:#10b981;">Bipou 12 Caixas (156 PPH)</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
     <!-- JavaScript padronizado do projeto -->
     <script src="{% static 'js/script.js' %}"></script>
-    
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
     <!-- Mini script para gerir as abas do Supervisor -->
     <script>
+        let excecaoAtual = '';
+        let targetCameraInput = '';
+        let scannerInst = null;
+
+
+
+        // =============================================
+        // BUSCA DE OPERADORES
+        // =============================================
+        document.querySelector('.search-box input').addEventListener('input', function() {
+            const term = this.value.toLowerCase();
+            document.querySelectorAll('.operator-card').forEach(card => {
+                const text = card.innerText.toLowerCase();
+                card.style.display = text.includes(term) ? '' : 'none';
+            });
+        });
+
         function mudarAba(aba) {
             document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
-            
+
             document.getElementById('tab-' + aba).style.display = 'block';
             document.querySelector(`[data-tab="${aba}"]`).classList.add('active');
         }
 
+        // --- CARREGAR EQUIPE DINAMICAMENTE ---
+        let _equipeCache = [];
+        let _kpiCacheArr = [];
+        let _rankingCacheArr = [];
+
+        async function carregarEquipe() {
+            try {
+                const [resEquipe, resKpis] = await Promise.all([
+                    fetch('/api/supervisor/equipe/'),
+                    fetch('/api/kpis/dados/')
+                ]);
+
+                if (!resEquipe.ok) return;
+
+                const dataEquipe = await resEquipe.json();
+                if (dataEquipe.status === 'erro') return;
+
+                const equipe = dataEquipe.equipe || [];
+                _equipeCache = equipe;
+                const total = dataEquipe.total || 0;
+                const ativosLogados = dataEquipe.ativos_logados || 0;
+
+                // Atualiza o contador de operadores no cabeçalho em tempo real
+                const contadorEl = document.getElementById('operadoresAtivos');
+                if (contadorEl) contadorEl.innerText = `${ativosLogados}/${total}`;
+
+                // Buscar e aplicar dados de KPI
+                let operadoresAtivosKpis = [];
+                if (resKpis.ok) {
+                    try {
+                        const dataKpis = await resKpis.json();
+                        operadoresAtivosKpis = dataKpis.operadores_ativos || [];
+                        _kpiCacheArr = operadoresAtivosKpis;
+
+                        // Preenche os cards de KPI reais do supervisor
+                        const setEl = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+                        setEl('svCaixas', dataKpis.caixas_finalizadas ?? '—');
+                        setEl('svLeadTime', (dataKpis.tempo_medio ?? '—') + (dataKpis.tempo_medio ? ' min' : ''));
+                        setEl('svPPH', dataKpis.pph_global ?? '—');
+                        const acerto = dataKpis.taxa_acerto ?? null;
+                        setEl('svAcuracia', acerto !== null ? acerto.toFixed(1) + '%' : '—');
+                        const lblEl = document.getElementById('svAcuraciaLabel');
+                        if (lblEl && acerto !== null) {
+                            lblEl.textContent = acerto >= 99 ? 'excelente' : acerto >= 95 ? 'atenção' : 'crítico';
+                            lblEl.className = acerto >= 99 ? 'positive' : acerto >= 95 ? 'warning' : 'danger';
+                        }
+                        // PPH médio no header
+                        setEl('pphMedio', dataKpis.pph_global ?? '—');
+                        
+                        _rankingCacheArr = dataKpis.ranking || [];
+                    } catch (_) {}
+                }
+
+                renderOperadores(equipe, operadoresAtivosKpis, _rankingCacheArr);
+
+            } catch (e) {
+                console.error("Erro ao carregar equipe:", e);
+            }
+        }
+
+        function renderOperadores(equipe, kpisArr, rankingArr = []) {
+            const grid = document.getElementById('operatorsGrid');
+            if (!grid) return;
+
+            if (!equipe || equipe.length === 0) {
+                grid.innerHTML = '<div style="color:var(--text-secondary);padding:40px;text-align:center;font-size:14px;">Nenhum operador na sua equipe.</div>';
+                return;
+            }
+
+            grid.innerHTML = equipe.map(op => {
+                const kpiData = (kpisArr || _kpiCacheArr).find(k => k.cracha === op.cracha);
+                const rankData = rankingArr.find(r => r.cracha === op.cracha);
+                
+                const isWorking = !!(kpiData || op.login_status);
+                
+                let wifiClass = 'error';
+                let wifiTitle = 'Desconectado';
+                if (op.dispositivo_status === 'ONLINE') { wifiClass = 'success'; wifiTitle = 'Conectado (Bipando)'; }
+                else if (op.dispositivo_status === 'TIMEOUT') { wifiClass = 'warning'; wifiTitle = 'Ausente (> 5 min sem bip)'; }
+                
+                const statusClass = kpiData ? '' : (op.login_status ? 'idle' : 'error');
+
+                const pph   = kpiData ? kpiData.pph : (rankData ? rankData.pph : '—');
+                const caixa = kpiData ? kpiData.pedido : (rankData ? rankData.caixas + ' (Finalizadas)' : '—');
+                const tempo = kpiData ? kpiData.tempo : (rankData ? rankData.tempo : '—');
+
+                return `
+                <article class="operator-card"
+                    data-nome="${op.nome.toLowerCase()}"
+                    data-cracha="${op.cracha.toLowerCase()}"
+                    data-setor="${(op.setor||'').toLowerCase()}">
+                    <header class="operator-header">
+                        <div class="operator-left">
+                            <div class="status-dot ${statusClass}" title="${isWorking ? 'Em Operação' : 'Sem Atividade'}"></div>
+                            <div>
+                                <h3 class="operator-name">${op.nome}</h3>
+                                <div class="operator-meta">${op.cracha} · ${op.setor || 'Sem setor'} · T:${op.turno || '—'}</div>
+                            </div>
+                        </div>
+                        <svg class="operator-signal ${wifiClass}" title="${wifiTitle}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"></path>
+                        </svg>
+                    </header>
+                    <div class="operator-stats">
+                        <div class="stat-block"><span class="stat-label">PPH</span><strong class="stat-value">${pph}</strong></div>
+                        <div class="stat-block"><span class="stat-label">CAIXA</span><strong class="stat-value" style="font-size:11px;">${caixa}</strong></div>
+                        <div class="stat-block"><span class="stat-label">TEMPO</span><strong class="stat-value">${tempo}</strong></div>
+                    </div>
+                </article>`;
+            }).join('');
+        }
+
+        window.filtrarOperadores = function(termo) {
+            const t = (termo || '').toLowerCase().trim();
+            const lista = !t ? _equipeCache : _equipeCache.filter(op =>
+                op.nome.toLowerCase().includes(t) ||
+                op.cracha.toLowerCase().includes(t) ||
+                (op.setor || '').toLowerCase().includes(t)
+            );
+            renderOperadores(lista, _kpiCacheArr, _rankingCacheArr);
+        };
+
+        carregarEquipe();
+        setInterval(() => { if (!document.hidden) carregarEquipe(); }, 15000);
+
+        // --- MASTER CODE (AUTORIZAR) ---
         function abrirMasterCode(idExcecao) {
+            excecaoAtual = idExcecao;
             document.getElementById('masterCodeOverlay').classList.add('active');
             document.getElementById('masterCodeOverlay').setAttribute('aria-hidden', 'false');
             document.getElementById('excecaoAlvo').innerText = idExcecao;
-            
-            // Força o foco do laser no input do crachá do supervisor
+
+            if (!document.getElementById('btnCamAuto')) {
+                const btn = document.createElement('button');
+                btn.id = 'btnCamAuto';
+                btn.innerHTML = '📷 Usar Câmera';
+                btn.style.cssText = "margin-bottom: 15px; padding: 8px; background: #334155; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%;";
+                btn.onclick = () => iniciarScannerSup('codigoSupervisorExcecao');
+                document.getElementById('codigoSupervisorExcecao').parentNode.insertBefore(btn, document.getElementById('codigoSupervisorExcecao'));
+            }
+
             setTimeout(() => document.getElementById('codigoSupervisorExcecao').focus(), 100);
         }
 
@@ -225,11 +514,121 @@
             document.getElementById('masterCodeOverlay').classList.remove('active');
             document.getElementById('masterCodeOverlay').setAttribute('aria-hidden', 'true');
         }
-        
+
         function confirmarMasterCode() {
-            alert('Exceção Autorizada com Sucesso! (Demonstração Frontend)');
+            const row = document.getElementById('row-' + excecaoAtual);
+            if (row) {
+                // Move para o histórico com status de autorizado
+                row.innerHTML = row.innerHTML.replace(/<td.*<button.*<\/td>/g, '<td><span style="color: #10b981; font-weight: bold;">Autorizado</span></td>');
+                document.getElementById('historicoExcecoesBody').prepend(row);
+
+                // Atualiza badge
+                const badge = document.getElementById('badgeExcecoes');
+                badge.innerText = parseInt(badge.innerText) - 1;
+            }
+            alert('Exceção Autorizada!');
             fecharMasterCode();
+        }
+
+        // --- NEGAR EXCEÇÃO ---
+        function abrirMotivoNegacao(idExcecao) {
+            excecaoAtual = idExcecao;
+            document.getElementById('modalNegacao').classList.add('active');
+            document.getElementById('modalNegacao').setAttribute('aria-hidden', 'false');
+            document.getElementById('excecaoNegarAlvo').innerText = idExcecao;
+
+            if (!document.getElementById('btnCamNega')) {
+                const btn = document.createElement('button');
+                btn.id = 'btnCamNega';
+                btn.innerHTML = '📷 Usar Câmera';
+                btn.style.cssText = "margin-bottom: 15px; padding: 8px; background: #334155; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%;";
+                btn.onclick = () => iniciarScannerSup('crachaNegacao');
+                document.getElementById('crachaNegacao').parentNode.insertBefore(btn, document.getElementById('crachaNegacao'));
+            }
+
+            setTimeout(() => document.getElementById('motivoNegacao').focus(), 100);
+        }
+
+        function fecharModalNegacao() {
+            document.getElementById('modalNegacao').classList.remove('active');
+            document.getElementById('modalNegacao').setAttribute('aria-hidden', 'true');
+        }
+
+        function confirmarNegacao() {
+            const motivo = document.getElementById('motivoNegacao').value;
+            if (!motivo) return alert('Por favor, informe o motivo.');
+
+            const row = document.getElementById('row-' + excecaoAtual);
+            if (row) {
+                // Move para o histórico com status de negado e o motivo
+                row.innerHTML = row.innerHTML.replace(/<td.*<button.*<\/td>/g, `<td><span style="color: #ef4444; font-weight: bold;">Negado: ${motivo}</span></td>`);
+                document.getElementById('historicoExcecoesBody').prepend(row);
+
+                // Atualiza badge
+                const badge = document.getElementById('badgeExcecoes');
+                badge.innerText = parseInt(badge.innerText) - 1;
+            }
+
+            document.getElementById('motivoNegacao').value = '';
+            document.getElementById('crachaNegacao').value = '';
+            alert('Exceção Negada e movida para o histórico!');
+            fecharModalNegacao();
+        }
+
+        // --- CAMERA SCANNER LOGIC ---
+        function iniciarScannerSup(targetId) {
+            targetCameraInput = targetId;
+            document.getElementById('scanner-modal').style.display = 'flex';
+            if (!scannerInst) {
+                scannerInst = new Html5QrcodeScanner("reader", { fps: 10, qrbox: { width: 250, height: 100 } }, false);
+                scannerInst.render(
+                    (decodedText) => {
+                        document.getElementById(targetCameraInput).value = decodedText;
+                        fecharScannerCameraSup();
+                    },
+                    (error) => { }
+                );
+            }
+        }
+        function fecharScannerCameraSup() {
+            if (scannerInst) {
+                scannerInst.clear().then(() => {
+                    scannerInst = null;
+                    document.getElementById('scanner-modal').style.display = 'none';
+                });
+            } else {
+                document.getElementById('scanner-modal').style.display = 'none';
+            }
+        }
+
+        // --- AGING STOCK (SUPERVISOR) ---
+        function resolverAgingSupervisor(id) {
+            const row = document.getElementById(id);
+            if (row) {
+                row.innerHTML = row.innerHTML.replace(/<td.*<button.*<\/td>/g, '<td><span style="color: #10b981; font-weight: bold;">Resolvido</span></td>');
+                document.getElementById('historicoAgingBody').prepend(row);
+                const badge = document.getElementById('badgeAging');
+                badge.innerText = Math.max(0, parseInt(badge.innerText) - 1);
+            }
+        }
+
+        // --- HISTORICO DA EQUIPE ---
+        function abrirHistoricoEquipe() {
+            document.getElementById('filtroHistEquipe').value = '';
+            filtrarHistEquipe();
+            document.getElementById('modalHistoricoEquipe').style.display = 'flex';
+        }
+        function fecharHistoricoEquipe() {
+            document.getElementById('modalHistoricoEquipe').style.display = 'none';
+        }
+        function filtrarHistEquipe() {
+            const term = document.getElementById('filtroHistEquipe').value.toLowerCase();
+            document.querySelectorAll('#histEquipeBody .hist-eq-row').forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
         }
     </script>
 </body>
+
 </html>

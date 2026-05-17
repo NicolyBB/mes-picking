@@ -10,6 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import pymysql
+pymysql.install_as_MySQLdb()
+
+
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -56,6 +60,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "picking_engine.middleware.RBACMiddleware",
 ]
 
 ROOT_URLCONF = "core.urls"
@@ -63,7 +68,7 @@ ROOT_URLCONF = "core.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / 'templates'],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -84,11 +89,11 @@ WSGI_APPLICATION = "core.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'mes_picking_kyly', # O nome exato que criamos no Passo 2
-        'USER': 'root', # Coloque o seu usuário do MySQL da VM
-        'PASSWORD': 'sE2nh0$%Aq7&', # Coloque a senha do seu MySQL da VM
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': 'mes_picking_kyly',    # O nome exato do banco
+        'USER': 'root',                # Usuário padrão do XAMPP
+        'PASSWORD':'',                # Deixe vazio (XAMPP padrão não tem senha)
+        'HOST': '127.0.0.1',           # Aponta para o computador local
+        'PORT': '3306',                # A porta ativa no XAMPP
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         }
@@ -120,7 +125,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "America/Sao_Paulo"
 
 USE_I18N = True
 
@@ -131,3 +136,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

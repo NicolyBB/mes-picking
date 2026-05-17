@@ -1,11 +1,12 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MES PICKING - Endereço de Coleta</title>
-    
+
     <!-- Ícone e CSS gerenciados pelo motor do Django -->
     <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
@@ -13,7 +14,16 @@
     <!-- Biblioteca Oficial da Indústria para ler QR/Barcode pela Câmera do Celular -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
+
 <body class="pnl-pick pnl-step-4">
+    <!-- 
+        SISTEMA DE ÁUDIO SENSORIAL (Requisito RNF: Feedback Multimodal)
+        Os arquivos .mp3 são carregados LOCALMENTE para garantir < 200ms mesmo sem internet.
+        correto1Segundo.mp3 = Bipe curto de acerto (Peça validada com sucesso)
+        Errado2Segundo.mp3  = Bipe longo de 2s de erro (SKU incorreto / tela travada)
+    -->
+    <audio id="som-sucesso" src="{% static 'audio/correto1Segundo.mp3' %}" preload="auto"></audio>
+    <audio id="som-erro" src="{% static 'audio/Errado2Segundo.mp3' %}" preload="auto"></audio>
     <div class="mobile-wrapper">
         <header>
             <!-- A seta de voltar aponta para o fechamento parcial, garantindo que o operador não saia sem salvar o status -->
@@ -21,7 +31,7 @@
             <div class="header-content">
                 <span class="header-icon">📦</span>
                 <h1>MES PICKING</h1>
-                <span class="header-progress">3/87</span>
+                <span class="header-progress">--/--</span>
             </div>
         </header>
 
@@ -31,47 +41,64 @@
                 <div class="barra-fill" style="width: 30%"></div>
             </div>
             <div class="indicadores">
-                <div class="indicador-card"><div class="indicador"><span class="ind-label">PPH</span><span class="ind-value">142</span></div></div>
-                <div class="indicador-card"><div class="indicador"><span class="ind-label">TEMPO</span><span class="ind-value">12:30</span></div></div>
-                <div class="indicador-card"><div class="indicador"><span class="ind-label">STREAK</span><span class="ind-value">8</span></div></div>
-                <div class="indicador-card"><div class="indicador"><span class="ind-label">ERROS</span><span class="ind-value" data-erros style="color: #dc3545;">0</span></div></div>
+                <div class="indicador-card">
+                    <div class="indicador"><span class="ind-label">PPH</span><span class="ind-value" data-pph>--</span>
+                    </div>
+                </div>
+                <div class="indicador-card">
+                    <div class="indicador"><span class="ind-label">TEMPO</span><span class="ind-value"
+                            data-tempo>--:--</span></div>
+                </div>
+                <div class="indicador-card">
+                    <div class="indicador"><span class="ind-label">STREAK</span><span class="ind-value"
+                            data-streak>0</span></div>
+                </div>
+                <div class="indicador-card">
+                    <div class="indicador"><span class="ind-label">ERROS</span><span class="ind-value" data-erros
+                            style="color: #dc3545;">0</span></div>
+                </div>
             </div>
         </div>
 
         <main class="centro">
             <span class="passo-label">ENDEREÇO DE PICKING</span>
-            
+
             <!-- A informação mais crítica da tela (Coordenada Logística) -->
-            <h2 id="enderecoAtual">A02.01.4A</h2>
-            
+            <h2 id="enderecoAtual">Aguardando...</h2>
+
             <div class="lista-azul">
                 <div class="lista-item stack-item">
                     <span class="item-label">Ref</span>
-                    <span class="item-value">1000017</span>
+                    <span class="item-value" id="peca-ref">--</span>
                 </div>
                 <div class="lista-item stack-item">
                     <span class="item-label">Cor</span>
-                    <span class="item-value">40064</span>
+                    <span class="item-value" id="peca-cor">--</span>
                 </div>
                 <div class="lista-item stack-item">
                     <span class="item-label">Tam</span>
-                    <span class="item-value">18A24M</span>
+                    <span class="item-value" id="peca-tam">--</span>
                 </div>
             </div>
-            
-            <!-- 1. INPUT OCULTO / AUTOFOCUS: O Laser do Datalogic "digitará" o código aqui sozinho -->
-            <input type="text" id="codigoPeca" class="campo-texto" placeholder="Aguardando bip da peça..." autofocus autocomplete="off" style="text-align: center;">
-            
-            <!-- 2. STATUS DE COMUNICAÇÃO: Mostra o retorno do AJAX (< 200ms) sem recarregar a tela -->
-            <div id="status-comunicacao" style="margin-top: 5px; font-weight: bold; height: 20px; color: #d4af11; text-align: center; width: 100%;"></div>
 
-            <!-- Botão da Câmera Real (Injeta o código no input 'codigoPeca') -->
-            <button onclick="iniciarScannerCamera('codigoPeca')" style="background: transparent; color: #d4af11; border: 1px solid #d4af11; padding: 10px; border-radius: 8px; width: 100%; margin-top: 15px; cursor: pointer; font-weight: bold;">
-                📷 Escanear Peça / Câmera
-            </button>
+            <!-- 1. INPUT OCULTO / AUTOFOCUS: O Laser do Datalogic "digitará" o código aqui sozinho -->
+            <input type="text" id="codigoPeca" class="campo-texto" placeholder="Aguardando bip da peça..." autofocus
+                autocomplete="off" style="text-align: center;">
+
+            <!-- 2. STATUS DE COMUNICAÇÃO: Mostra o retorno do AJAX (< 200ms) sem recarregar a tela -->
+            <div id="status-comunicacao"
+                style="margin-top: 5px; font-weight: bold; height: 20px; color: #d4af11; text-align: center; width: 100%;">
+            </div>
+
+            <!-- 3. CÂMERA INTEGRADA (SEMPRE ATIVA) -->
+            <div id="reader-container"
+                style="margin-top: 15px; border-radius: 8px; overflow: hidden; border: 2px solid #d4af11; background: #0f1a2e; width: 100%;">
+                <div id="reader" style="width: 100%; min-height: 250px; background: #000;"></div>
+            </div>
+
         </main>
 
-        <!-- 3. BOTÕES DE AÇÃO E EXCEÇÃO DA REGRA DE NEGÓCIO -->
+        <!-- 4. BOTÕES DE AÇÃO E EXCEÇÃO DA REGRA DE NEGÓCIO -->
         <div class="botoes-acao">
             <button class="btn-pular" onclick="pularSKU()">
                 <span class="btn-icone">⏭️</span>
@@ -87,7 +114,7 @@
             </button>
         </div>
 
-        <!-- 4. MODAL DE ERRO / TRAVA DE SEGURANÇA -->
+        <!-- 5. MODAL DE ERRO / TRAVA DE SEGURANÇA -->
         <div id="modal-erro" class="modal-erro">
             <div class="modal-conteudo">
                 <div class="modal-icone">⛔</div>
@@ -99,26 +126,26 @@
             </div>
         </div>
 
-        <!-- 5. MODAL DE PICKING PARCIAL -->
+        <!-- 6. MODAL DE PICKING PARCIAL -->
         <div id="modal-parcial" class="modal-parcial">
             <div class="modal-conteudo">
-                <h2 style="color: #d4af11; font-size: 24px; text-transform: uppercase; margin-bottom: 15px;">Salvar como PARCIAL?</h2>
-                <p class="modal-desc" style="color: #fff; font-size: 16px; margin-bottom: 25px;">A caixa será marcada com status <strong>PARCIAL</strong>. Use em casos de interrupção multi-andar ou desabastecimento.</p>
+                <h2 style="color: #d4af11; font-size: 24px; text-transform: uppercase; margin-bottom: 15px;">Salvar como
+                    PARCIAL?</h2>
+                <p class="modal-desc" style="color: #fff; font-size: 16px; margin-bottom: 25px;">A caixa será marcada
+                    com status <strong>PARCIAL</strong>. Use em casos de interrupção multi-andar ou desabastecimento.
+                </p>
                 <div class="modal-botoes" style="display: flex; gap: 10px;">
-                    <button class="btn-cancelar" onclick="fecharModalParcial()" style="flex: 1; padding: 15px; border-radius: 8px; border: none; background: #444; color: #fff; font-weight: bold; cursor: pointer;">Cancelar</button>
-                    <!-- Encaminha via Rota Django para a Finalização -->
-                    <button class="btn-confirmar-parcial" onclick="window.location.href='{% url 'finalizacao_pick' %}'" style="flex: 1; padding: 15px; border-radius: 8px; border: none; background: #d4af11; color: #003366; font-weight: bold; cursor: pointer;">Confirmar</button>
+                    <button class="btn-cancelar" onclick="fecharModalParcial()"
+                        style="flex: 1; padding: 15px; border-radius: 8px; border: none; background: #444; color: #fff; font-weight: bold; cursor: pointer;">Cancelar</button>
+                    <!-- Formulário POST para encerrar a sessão como PARCIAL no banco antes de redirecionar -->
+                    <form method="post" action="{% url 'encerrar_parcial' %}" style="flex: 1;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-confirmar-parcial"
+                            style="width:100%; padding: 15px; border-radius: 8px; border: none; background: #d4af11; color: #003366; font-weight: bold; cursor: pointer; font-size: 1rem;">
+                            ✅ Confirmar PARCIAL
+                        </button>
+                    </form>
                 </div>
-            </div>
-        </div>
-
-        <!-- 6. MODAL DO SCANNER DE CÂMERA -->
-        <div id="scanner-modal" class="modal-erro" style="display: none; flex-direction: column; background-color: rgba(11, 18, 32, 0.95); z-index: 2000;">
-            <div class="modal-conteudo" style="background: #0f1a2e; border: 2px solid #d4af11; max-width: 350px;">
-                <h2 style="color: #d4af11; font-size: 22px;">Câmera Ativada</h2>
-                <p style="font-size: 14px; color: #ccc;">Aponte para o código de barras da peça</p>
-                <div id="reader" style="width: 100%; min-height: 250px; background: #000; margin-bottom: 20px; border-radius: 8px; overflow: hidden;"></div>
-                <button onclick="fecharScannerCamera()" class="btn-cancelar" style="width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; background: #444; color: #fff; border: none;">Cancelar</button>
             </div>
         </div>
 
@@ -126,4 +153,5 @@
         <script src="{% static 'js/script.js' %}"></script>
     </div>
 </body>
+
 </html>

@@ -1,0 +1,646 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard MES — KPIs Tempo Real</title>
+    <meta name="description" content="Dashboard gerencial em tempo real — MES Picking Kyly.">
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body class="dashboard-mes">
+
+    <header>
+        <div class="header-left">
+            <div class="logo-container">
+                <span class="logo-text">MES</span>
+                <span class="logo-subtitle">PICKING</span>
+            </div>
+            <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="kyly-logo">
+        </div>
+        <div class="header-right">
+            <span id="liveStatus"
+                style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-secondary);margin-right:10px;">
+                <span
+                    style="width:8px;height:8px;background:#10b981;border-radius:50%;display:inline-block;animation:kpi-blink 1.5s infinite;"></span>
+                LIVE
+            </span>
+            <button class="theme-toggle" id="themeToggle" title="Tema"><span class="theme-icon">🌙</span></button>
+            <span class="data-atual" id="dataAtual"></span>
+        </div>
+    </header>
+
+    <nav class="nav-menu">
+        <a href="{% url 'dashboard_kpis' %}" class="nav-item active">KPIs Tempo Real</a>
+        <a href="{% url 'aging_stock' %}" class="nav-item">Aging Stock</a>
+        <a href="{% url 'painel_operacoes' %}" class="nav-item">Painel do Supervisor</a>
+        {% if perfil_usuario == 'ADM' %}
+        <a href="{% url 'importacao' %}" class="nav-item">Importação</a>
+        <a href="{% url 'funcionarios' %}" class="nav-item">Funcionários</a>
+        <a href="{% url 'gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
+        <a href="{% url 'webhooks' %}" class="nav-item">Webhooks</a>
+        <a href="{% url 'heartbeat_monitor' %}" class="nav-item">💻 Dispositivos</a>
+        {% endif %}
+    </nav>
+
+    <main class="dashboard">
+
+        <!-- FILTROS DE PERÍODO -->
+        <div class="period-filter-bar" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span class="period-label">📅 Filtrar por:</span>
+                <button class="period-btn active" id="pHoje" onclick="setPeriodo('hoje', this)">Hoje</button>
+                <button class="period-btn" id="pOntem" onclick="setPeriodo('ontem', this)">Ontem</button>
+                <button class="period-btn" id="p7d" onclick="setPeriodo('7dias', this)">7 dias</button>
+                <button class="period-btn" id="p30d" onclick="setPeriodo('30dias', this)">30 dias</button>
+                <button class="period-btn" id="pPersonalizado" onclick="abrirPersonalizado()">Personalizado</button>
+                <span class="period-current" id="periodoLabel">Hoje</span>
+            </div>
+            <div>
+                <button onclick="abrirModalTV()"
+                    style="padding:10px 20px;background:linear-gradient(135deg, var(--accent), #f59e0b);color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;box-shadow: 0 4px 15px rgba(212, 175, 17, 0.4);transition:transform 0.2s;">📺
+                    Iniciar Modo TV</button>
+            </div>
+        </div>
+
+        <!-- META DIÁRIA -->
+        <div class="barra-progresso">
+            <span class="barra-label">META DIÁRIA</span>
+            <div class="barra-track">
+                <div class="barra-fill" id="barraFill" style="width:0%"></div>
+            </div>
+            <span class="barra-valor" id="barraPercent">0%</span>
+        </div>
+
+        <!-- 8 KPI CARDS -->
+        <div class="cards-row">
+            <div class="card" data-kpi-id="PPH">
+                <span class="card-label">PPH</span>
+                <span class="card-value" id="kPPH">{{ pph_global|default:"0" }}</span>
+                <span class="card-subtitle">Peças/hora</span>
+            </div>
+            <div class="card card-dark" data-kpi-id="Tempo">
+                <span class="card-label">Tempo Médio</span>
+                <span class="card-value" id="kTempo" style="font-size:2rem;">—</span>
+                <span class="card-subtitle">Por caixa</span>
+            </div>
+            <div class="card card-dark" data-kpi-id="Streak">
+                <span class="card-label">Streak</span>
+                <span class="card-value" id="kStreak">0</span>
+                <span class="card-subtitle">Sequência</span>
+            </div>
+            <div class="card card-dark" data-kpi-id="Acerto">
+                <span class="card-label">Taxa Acerto</span>
+                <span class="card-value" id="kAcerto">{{ taxa_acerto|default:"100" }}%</span>
+                <span class="card-subtitle">Acertos/Total</span>
+            </div>
+        </div>
+
+        <div class="cards-row">
+            <div class="card card-dark" data-kpi-id="Caixas">
+                <span class="card-label">Caixas Hoje</span>
+                <span class="card-value" id="kCaixas">{{ caixas_finalizadas|default:"0" }}</span>
+                <span class="card-subtitle">Finalizadas</span>
+            </div>
+            <div class="card card-dark" data-kpi-id="TempoTotal">
+                <span class="card-label">Tempo Total</span>
+                <span class="card-value" id="kTempoTotal" style="font-size:2rem;">0:00</span>
+                <span class="card-subtitle">Trabalhado</span>
+            </div>
+            <div class="card card-dark" data-kpi-id="Erros">
+                <span class="card-label">Erros</span>
+                <span class="card-value" id="kErros">{{ total_erros|default:"0" }}</span>
+                <span class="card-subtitle">Bipagens</span>
+            </div>
+            <div class="card card-dark" data-kpi-id="Pecas">
+                <span class="card-label">Peças Pickadas</span>
+                <span class="card-value" id="kPecas">{{ total_pecas_bipadas|default:"0" }}</span>
+                <span class="card-subtitle">Hoje</span>
+            </div>
+        </div>
+
+
+
+        <!-- CHARTS -->
+        <div class="charts-row">
+            <section class="section">
+                <h2>PPH — Peças por Turno</h2>
+                <div class="grafico-container">
+                    <div class="grafico-barras" id="graficoPPH">
+                        <!-- preenchido via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <section class="section">
+                <h2>Ranking PPH</h2>
+                <div class="ranking-container" id="rankingContainer">
+                    <div style="color:var(--text-secondary);text-align:center;padding:20px;">Carregando...</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- OPERADOR DESTAQUE -->
+        <div id="operadorDestaque" class="operador-destaque" style="display:none;">
+            <div class="destaque-avatar" id="destaqueAvatar">—</div>
+            <div class="destaque-info">
+                <div class="destaque-nome" id="destaqueNome">—</div>
+                <div class="destaque-status">● Em atividade</div>
+            </div>
+            <div class="destaque-stats">
+                <div class="destaque-stat">
+                    <div class="destaque-stat-value" id="destaquePPH">—</div>
+                    <div class="destaque-stat-label">PPH</div>
+                </div>
+                <div class="destaque-stat">
+                    <div class="destaque-stat-value" id="destaqueStreak">—</div>
+                    <div class="destaque-stat-label">STREAK</div>
+                </div>
+                <div class="destaque-stat">
+                    <div class="destaque-stat-value" id="destaqueCaixas">—</div>
+                    <div class="destaque-stat-label">CAIXAS</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OPERADORES EM ATIVIDADE -->
+        <section class="section">
+            <h2>Operadores em Atividade</h2>
+            <div class="operadores-grid" id="operadoresGrid">
+                <div style="color:var(--text-secondary);font-size:.9rem;">Nenhum operador ativo no momento.</div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MOBILE → Chão de Fábrica -->
+    <div id="mobileMode"
+        style="display:none;position:fixed;inset:0;background:#0a0f1a;z-index:9999;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;">
+        <div style="font-size:3.5rem;margin-bottom:20px;">📦</div>
+        <h1 style="color:#d4af11;font-size:1.8rem;margin-bottom:10px;">MES PICKING</h1>
+        <p style="color:#8892b0;margin-bottom:30px;">Modo Operador — Chão de Fábrica</p>
+        <a href="{% url 'login_colaborador' %}"
+            style="display:block;background:#d4af11;color:#003366;font-weight:700;padding:18px 40px;border-radius:12px;font-size:1.1rem;text-decoration:none;margin-bottom:14px;width:100%;max-width:320px;">🔑
+            Entrar como Coletor</a>
+        <a href="{% url 'login_supervisor' %}"
+            style="display:block;background:rgba(255,255,255,.05);color:#fff;border:1px solid rgba(255,255,255,.15);font-weight:600;padding:14px 40px;border-radius:12px;font-size:1rem;text-decoration:none;width:100%;max-width:320px;">👷
+            Acesso Supervisor</a>
+    </div>
+
+    <script src="{% static 'js/script.js' %}"></script>
+    <script>
+        // ── Mobile detect ─────────────────────────────────────────
+        function checkMobile() {
+            const m = document.getElementById('mobileMode');
+            if (window.innerWidth < 768) {
+                m.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            } else {
+                m.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+
+        // ── Period Filter ─────────────────────────────────────────
+        let periodoAtual = 'hoje';
+        let dataInicio = null;
+        let dataFim = null;
+
+        function setPeriodo(p, btn) {
+            periodoAtual = p;
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            const labels = { hoje: 'Hoje', ontem: 'Ontem', '7dias': 'Últimos 7 dias', '30dias': 'Últimos 30 dias' };
+            document.getElementById('periodoLabel').textContent = labels[p] || p;
+            carregarKPIs();
+        }
+
+        function abrirPersonalizado() {
+            const ini = prompt('Data inicial (AAAA-MM-DD):');
+            if (!ini) return;
+            const fim = prompt('Data final (AAAA-MM-DD):') || ini;
+            dataInicio = ini;
+            dataFim = fim;
+            periodoAtual = 'personalizado';
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('pPersonalizado').classList.add('active');
+            document.getElementById('periodoLabel').textContent = `${ini} → ${fim}`;
+            carregarKPIs();
+        }
+
+        // ── KPI Refresh ───────────────────────────────────────────
+        const META_PPH = 130;
+        const META_CAIXAS_DIA = 300;
+
+        async function carregarKPIs() {
+            try {
+                let url = `/api/kpis/dados/?periodo=${periodoAtual}`;
+                if (periodoAtual === 'personalizado' && dataInicio) url += `&inicio=${dataInicio}&fim=${dataFim}`;
+                const res = await fetch(url);
+                if (!res.ok) return;
+                const d = await res.json();
+
+                // Cards
+                setText('kPPH', d.pph_global ?? 0);
+                setText('kTempo', d.tempo_medio ?? '—');
+                setText('kStreak', d.streak ?? 0);
+                setText('kAcerto', (d.taxa_acerto ?? 100).toFixed(1) + '%');
+                setText('kCaixas', d.caixas_finalizadas ?? 0);
+                setText('kErros', d.total_erros ?? 0);
+                setText('kPecas', d.total_pecas_bipadas ?? 0);
+
+                // Cor do acerto
+                const acerto = d.taxa_acerto ?? 100;
+                document.getElementById('kAcerto').style.color = acerto >= 99 ? '#10b981' : acerto >= 95 ? '#d4af11' : '#ef4444';
+                const erros = d.total_erros ?? 0;
+                document.getElementById('kErros').style.color = erros > 0 ? '#ef4444' : 'var(--accent)';
+
+                // Barra meta
+                const pct = Math.min(100, Math.round(((d.caixas_finalizadas ?? 0) / META_CAIXAS_DIA) * 100));
+                document.getElementById('barraFill').style.width = pct + '%';
+                document.getElementById('barraPercent').textContent = pct + '%';
+
+                // PPH turnos
+                renderTurnos(d.pph_turnos ?? {});
+
+                // Ranking
+                renderRanking(d.ranking ?? []);
+
+                // Operadores
+                renderOperadores(d.operadores_ativos ?? []);
+
+                // Destaque (1º do ranking)
+                if (d.ranking && d.ranking.length > 0) {
+                    const top = d.ranking[0];
+                    const el = document.getElementById('operadorDestaque');
+                    el.style.display = 'flex';
+                    const iniciais = top.nome.split(' ').map(n => n[0]).slice(0, 2).join('');
+                    document.getElementById('destaqueAvatar').textContent = iniciais;
+                    document.getElementById('destaqueNome').textContent = top.nome;
+                    document.getElementById('destaquePPH').textContent = top.pph;
+                    document.getElementById('destaqueStreak').textContent = top.pecas ?? '—';
+                    document.getElementById('destaqueCaixas').textContent = d.caixas_finalizadas ?? 0;
+                }
+            } catch (e) {
+                console.warn('KPI fetch error:', e);
+            }
+        }
+
+        function setText(id, val) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        }
+
+        function renderTurnos(t) {
+            const turnos = [
+                { nome: 'MANHÃ', val: t.manha ?? 0, cls: 'barra-manha' },
+                { nome: 'TARDE', val: t.tarde ?? 0, cls: 'barra-tarde' },
+                { nome: 'NOITE', val: t.noite ?? 0, cls: 'barra-noite' },
+                { nome: 'ATUAL', val: t.atual ?? 0, cls: 'barra-atual' },
+            ];
+            const max = Math.max(...turnos.map(x => x.val), 1);
+            const container = document.getElementById('graficoPPH');
+            container.innerHTML = '';
+            turnos.forEach(tr => {
+                // Calculate height as % of the bar-area (200px column above the 48px label strip)
+                const pct = Math.max(8, Math.round((tr.val / max) * 100));
+                const group = document.createElement('div');
+                group.className = 'barra-group';
+                group.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:flex-end;flex:1;max-width:150px;height:100%;position:relative;';
+
+                const barEl = document.createElement('div');
+                barEl.className = `barra ${tr.cls}`;
+                barEl.style.cssText = `width:100%;height:${pct}%;border-radius:12px 12px 4px 4px;transition:height 1s ease;position:relative;overflow:hidden;min-height:12px;`;
+
+                const shine = document.createElement('div');
+                shine.className = 'barra-shine';
+                barEl.appendChild(shine);
+
+                const glow = document.createElement('div');
+                glow.className = 'barra-glow';
+                barEl.appendChild(glow);
+
+                const label = document.createElement('div');
+                label.style.cssText = 'font-size:11px;font-weight:700;color:var(--text-secondary);letter-spacing:1px;text-transform:uppercase;margin-top:8px;text-align:center;';
+                label.textContent = tr.nome;
+
+                const value = document.createElement('div');
+                value.style.cssText = 'font-size:16px;font-weight:800;color:var(--accent);margin-top:2px;';
+                value.textContent = tr.val;
+
+                group.appendChild(barEl);
+                group.appendChild(label);
+                group.appendChild(value);
+                container.appendChild(group);
+            });
+        }
+
+        function renderRanking(ranking) {
+            const el = document.getElementById('rankingContainer');
+            if (!ranking.length) {
+                el.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:20px;">Sem dados hoje.</div>';
+                return;
+            }
+            const medalhas = ['🥇', '🥈', '🥉'];
+            el.innerHTML = ranking.map((r, i) => {
+                const ini = r.nome.split(' ').map(n => n[0]).slice(0, 2).join('');
+                const cls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : '';
+                return `<div class="ranking-item ${cls}">
+                <span class="rank-pos">${i + 1}º</span>
+                <div class="rank-avatar">${ini}</div>
+                <span class="rank-nome">${r.nome}</span>
+                <span class="rank-pph">${r.pph}</span>
+            </div>`;
+            }).join('');
+        }
+
+        function renderOperadores(ops) {
+            const el = document.getElementById('operadoresGrid');
+            if (!ops.length) {
+                el.innerHTML = '<div style="color:var(--text-secondary);font-size:.9rem;">Nenhum operador ativo.</div>';
+                return;
+            }
+            el.innerHTML = ops.map(op => {
+                const ini = op.nome.split(' ').map(n => n[0]).slice(0, 2).join('');
+                return `<div class="operador-card">
+                <div class="operador-avatar">${ini}</div>
+                <div class="operador-info">
+                    <div class="operador-nome">${op.nome}</div>
+                    <div class="operador-meta">
+                        <span class="meta-pph">PPH: ${op.pph}</span>
+                        <span class="meta-streak">🔥 ${op.pecas}</span>
+                    </div>
+                </div>
+                <span class="operador-status ativo">● Ativo</span>
+            </div>`;
+            }).join('');
+        }
+
+        // ── Heartbeat do coletor ─────────────────────────────────
+        async function enviarHeartbeat() {
+            try {
+                await fetch('/api/heartbeat/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({ dispositivo_id: 'dashboard_adm' })
+                });
+            } catch (e) { }
+        }
+
+        function getCookie(name) {
+            let v = null;
+            document.cookie.split(';').forEach(c => {
+                c = c.trim();
+                if (c.startsWith(name + '=')) v = decodeURIComponent(c.slice(name.length + 1));
+            });
+            return v;
+        }
+
+        // ── Init ─────────────────────────────────────────────────
+        carregarKPIs();
+        enviarHeartbeat();
+        setInterval(() => {
+            if (!document.hidden) carregarKPIs();
+        }, 30000); // refresh KPIs a cada 30s apenas se a aba estiver ativa
+        setInterval(enviarHeartbeat, 60000); // heartbeat a cada 1min
+
+        // ── MODO TV (REMASTERIZADO) ──────────────────────────────────
+        let isTVMode = false;
+        let tvClockInterval = null;
+
+        function abrirModalTV() {
+            document.getElementById('modalTVOverlay').style.display = 'flex';
+        }
+
+        function fecharModalTV() {
+            document.getElementById('modalTVOverlay').style.display = 'none';
+        }
+
+        function applyTVMode() {
+            isTVMode = true;
+            fecharModalTV();
+
+            // Oculta a interface principal
+            document.querySelector('header').style.display = 'none';
+            document.querySelector('.nav-menu').style.display = 'none';
+            document.querySelector('.dashboard').style.display = 'none';
+
+            // Exibe o container da TV
+            const tvContainer = document.getElementById('tvContainer');
+            const tvGrid = document.getElementById('tvGrid');
+            tvContainer.style.display = 'flex';
+            tvGrid.innerHTML = ''; // limpa anterior
+
+            // Pega KPIs selecionados pelos checkboxes
+            const selecionados = new Set(
+                Array.from(document.querySelectorAll('.tv-kpi-option input:checked')).map(el => el.value)
+            );
+
+            if (selecionados.size === 0) {
+                tvGrid.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:40px;font-size:1.5rem;">Nenhum KPI selecionado.</div>';
+            } else {
+                // Usa data-kpi-id nos cards para mapeamento CONFIÁVEL
+                document.querySelectorAll('[data-kpi-id]').forEach(card => {
+                    const kpiId = card.getAttribute('data-kpi-id');
+                    if (!selecionados.has(kpiId)) return;
+
+                    const clone = card.cloneNode(true);
+                    clone.removeAttribute('data-kpi-id');
+                    clone.style.cssText = `
+                        flex: 1; min-width: 280px; min-height: 260px;
+                        display: flex; flex-direction: column;
+                        justify-content: center; align-items: center;
+                        background: var(--bg-secondary);
+                        border: 2px solid rgba(212,175,17,0.3);
+                        box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 30px rgba(212,175,17,0.1);
+                        border-radius: 28px; padding: 40px 30px;
+                        transition: border-color .3s;
+                    `;
+
+                    // Escala fontes para TV
+                    const labelEl = clone.querySelector('.card-label');
+                    const valueEl = clone.querySelector('.card-value');
+                    const subtitleEl = clone.querySelector('.card-subtitle');
+                    if (labelEl) { labelEl.style.fontSize = '1.3rem'; labelEl.style.marginBottom = '12px'; }
+                    if (valueEl) { valueEl.style.fontSize = '5rem'; valueEl.style.fontWeight = '900'; valueEl.style.lineHeight = '1'; }
+                    if (subtitleEl) { subtitleEl.style.fontSize = '1rem'; subtitleEl.style.marginTop = '12px'; }
+
+                    // Dá ID único ao clone para que setText() atualize tanto o original quanto o clone
+                    if (valueEl && valueEl.id) {
+                        valueEl.id = valueEl.id + '_tv';
+                    }
+
+                    tvGrid.appendChild(clone);
+                });
+            }
+
+            // Inicia o relógio
+            atualizarRelogioTV();
+            tvClockInterval = setInterval(atualizarRelogioTV, 1000);
+
+            // Fullscreen robusto
+            const el = document.documentElement;
+            const reqFS = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+            fullscreenChangeReady = false;
+            if (reqFS) {
+                reqFS.call(el)
+                    .then(() => { setTimeout(() => { fullscreenChangeReady = true; }, 800); })
+                    .catch(e => { fullscreenChangeReady = true; console.warn('Fullscreen não suportado:', e); });
+            } else {
+                fullscreenChangeReady = true;
+            }
+        }
+
+        function exitTVMode() {
+            isTVMode = false;
+            clearInterval(tvClockInterval);
+
+            // Restaura interface principal
+            document.querySelector('header').style.display = 'flex';
+            document.querySelector('.nav-menu').style.display = 'flex';
+            document.querySelector('.dashboard').style.display = 'flex';
+
+            // Oculta container da TV
+            document.getElementById('tvContainer').style.display = 'none';
+
+            const exitFS = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+            if (exitFS && document.fullscreenElement) {
+                exitFS.call(document).catch(() => {});
+            }
+        }
+
+        function atualizarRelogioTV() {
+            const agora = new Date();
+            document.getElementById('tvClock').innerText = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        // ESC sai do modo TV
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && isTVMode) exitTVMode();
+        });
+        // Sai quando o browser sai do fullscreen manualmente — mas IGNORAR
+        // o evento imediato que dispara ao entrar em fullscreen
+        let fullscreenChangeReady = false;
+        document.addEventListener('fullscreenchange', function() {
+            if (!fullscreenChangeReady) return;
+            if (!document.fullscreenElement && isTVMode) exitTVMode();
+        });
+
+        // setText sincroniza original + clone TV
+        window.setText = function (id, val) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+            const tvEl = document.getElementById(id + '_tv');
+            if (tvEl) tvEl.textContent = val;
+        };
+    </script>
+    <style>
+        .tv-kpi-option {
+            background: var(--card-bg);
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .tv-kpi-option:hover {
+            background: rgba(212, 175, 17, 0.1);
+            border-color: rgba(212, 175, 17, 0.4);
+        }
+
+        @keyframes kpi-blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .2;
+            }
+        }
+
+        @media(max-width:767px) {
+
+            header,
+            nav,
+            main.dashboard {
+                display: none !important;
+            }
+        }
+    </style>
+
+    <!-- MODAL SELEÇÃO DE KPI PARA MODO TV -->
+    <div id="modalTVOverlay"
+        style="display:none;position:fixed;inset:0;background:rgba(10,15,26,.85);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(8px);">
+        <div
+            style="background:var(--bg-secondary);padding:30px;border-radius:16px;width:90%;max-width:500px;box-shadow:0 25px 50px rgba(0,0,0,0.5);border:1px solid var(--border-color);">
+            <h2 style="margin-bottom:10px;color:var(--text-primary);text-align:center;">📺 Configurar Modo TV</h2>
+            <p style="color:var(--text-secondary);text-align:center;margin-bottom:20px;font-size:0.9rem;">Selecione
+                os indicadores que deseja exibir em tela cheia.</p>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:25px;">
+                <label class="tv-kpi-option"><input type="checkbox" value="PPH" checked> PPH (Peças/hora)</label>
+                <label class="tv-kpi-option"><input type="checkbox" value="Tempo" checked> Tempo Médio</label>
+                <label class="tv-kpi-option"><input type="checkbox" value="Streak"> Streak Máximo</label>
+                <label class="tv-kpi-option"><input type="checkbox" value="Acerto"> Taxa de Acerto</label>
+                <label class="tv-kpi-option"><input type="checkbox" value="Caixas"> Caixas Hoje</label>
+                <label class="tv-kpi-option"><input type="checkbox" value="TempoTotal"> Tempo Total</label>
+                <label class="tv-kpi-option"><input type="checkbox" value="Erros"> Erros Registrados</label>
+                <label class="tv-kpi-option"><input type="checkbox" value="Pecas"> Peças Pickadas</label>
+            </div>
+
+            <div style="display:flex;gap:12px;">
+                <button onclick="fecharModalTV()"
+                    style="flex:1;padding:12px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-weight:600;">Cancelar</button>
+                <button onclick="applyTVMode()"
+                    style="flex:2;padding:12px;background:linear-gradient(135deg, #10b981, #059669);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:bold;box-shadow:0 4px 15px rgba(16, 185, 129, 0.4);">Iniciar
+                    Apresentação</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTAINER EXCLUSIVO DO MODO TV -->
+    <div id="tvContainer"
+        style="display:none;position:fixed;inset:0;background:#0a0f1a;z-index:9998;padding:40px;flex-direction:column;gap:30px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:15px;">
+                <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" style="height:40px;">
+                <h1 style="color:var(--text-primary);margin:0;font-size:2rem;">Painel de Resultados <span
+                        style="color:var(--accent);">MES</span></h1>
+            </div>
+            <div style="display:flex;align-items:center;gap:15px;">
+                <span
+                    style="display:flex;align-items:center;gap:8px;color:#10b981;font-weight:bold;font-size:1.2rem;">
+                    <span
+                        style="width:12px;height:12px;background:#10b981;border-radius:50%;animation:kpi-blink 1.5s infinite;"></span>
+                    AO VIVO
+                </span>
+                <div id="tvClock"
+                    style="font-size:1.5rem;font-weight:bold;color:var(--text-primary);font-family:monospace;background:var(--bg-secondary);padding:5px 15px;border-radius:8px;border:1px solid var(--border-color);">
+                    --:--</div>
+            </div>
+        </div>
+        <div id="tvGrid"
+            style="display:grid;grid-template-columns:repeat(auto-fit, minmax(350px, 1fr));gap:30px;flex:1;align-items:center;justify-items:center;">
+            <!-- Cards clonados virão para cá -->
+        </div>
+        <button onclick="exitTVMode()"
+            style="position:absolute;bottom:30px;right:30px;padding:12px 24px;background:var(--bg-secondary);color:var(--text-secondary);border:1px solid var(--border-color);border-radius:8px;cursor:pointer;font-weight:bold;opacity:0.5;transition:all 0.3s;"
+            onmouseover="this.style.opacity='1';this.style.color='#ef4444';"
+            onmouseout="this.style.opacity='0.5';this.style.color='var(--text-secondary)';">Sair do Modo TV
+            (ESC)</button>
+    </div>
+</body>
+</html>

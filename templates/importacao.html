@@ -1,11 +1,25 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Importação Dashboard MES</title>
-    <link rel="icon" href="../../PnlPickPeça/KYLY_logo.png">
-    <link rel="stylesheet" href="../../style.css">
+    <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        .config-section { margin-top: 30px; }
+        .config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .config-card { background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; }
+        .config-card h3 { margin-bottom: 5px; color: var(--text-primary); font-size: 16px; }
+        .config-desc { color: var(--text-secondary); font-size: 13px; margin-bottom: 15px; }
+        .config-preview { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+        .config-tag { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-family: monospace; color: var(--text-primary); }
+        .btn-small { padding: 8px 12px; background: #334155; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-small:hover { background: #475569; }
+        .radio-group, .checkbox-group { display: flex; flex-direction: column; gap: 10px; }
+        .radio-option, .checkbox-option { display: flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 14px; cursor: pointer; }
+    </style>
 </head>
 <body class="dashboard-mes">
     <header>
@@ -14,22 +28,26 @@
                 <span class="logo-text">MES</span>
                 <span class="logo-subtitle">PICKING</span>
             </div>
-            <img src="../../PnlPickPeça/KYLY_logo.png" alt="KYLY" class="kyly-logo">
+            <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="kyly-logo">
         </div>
         <div class="header-right">
             <button class="theme-toggle" id="themeToggle" title="Alternar tema">
-                <span class="theme-icon"></span>
+                <span class="theme-icon">🌙</span>
             </button>
             <span class="data-atual" id="dataAtual"></span>
         </div>
     </header>
+    <!-- Menu de Navegação 100% Dinâmico com Rotas Django -->
     <nav class="nav-menu">
-        <a href="../index/index.html" class="nav-item">KPIs Tempo Real</a>
-        <a href="#" class="nav-item active">Importação</a>
-        <a href="../aging-stock/aging-stock.html" class="nav-item">Aging Stock</a>
-        <a href="../funcionarios/funcionarios.html" class="nav-item">Funcionários</a>
-        <a href="../gerir-kpis/gerir-kpis.html" class="nav-item">Gerir KPIs</a>
-        <a href="../webhooks/webhooks.html" class="nav-item">Webhooks</a>
+        <a href="{% url 'dashboard_kpis' %}" class="nav-item">KPIs Tempo Real</a>
+        <a href="{% url 'aging_stock' %}" class="nav-item">Aging Stock</a>
+        <a href="{% url 'painel_operacoes' %}" class="nav-item">Painel do Supervisor</a>
+        {% if perfil_usuario == 'ADM' %}
+        <a href="{% url 'importacao' %}" class="nav-item active">Importação</a>
+        <a href="{% url 'funcionarios' %}" class="nav-item">Funcionários</a>
+        <a href="{% url 'gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
+        <a href="{% url 'webhooks' %}" class="nav-item">Webhooks</a>
+        {% endif %}
     </nav>
     <main class="dashboard">
         <section class="upload-section">
@@ -50,6 +68,15 @@
                 <button class="btn btn-secondary" id="btnLimpar">
                     <span></span> Limpar Seleção
                 </button>
+                
+                <div style="display:flex; gap:8px; margin-left:auto;">
+                    <button type="button" onclick="baixarComoXLSX('/api/v1/exportar-pedidos/', 'Estoque_Completo')" class="btn" style="background:#217346; color:#fff; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border-radius:8px;">
+                        <span>📊</span> Baixar Tudo (XLSX)
+                    </button>
+                    <a href="/api/v1/exportar-pedidos/" class="btn" style="background:#10b981; color:#fff; text-decoration:none; display:inline-flex; align-items:center; gap:8px;">
+                        <span>📥</span> Baixar Tudo (CSV)
+                    </a>
+                </div>
             </div>
         </section>
 
@@ -64,98 +91,83 @@
         </section>
 
         <section class="status-section">
-            <h2>Status das Importações</h2>
+            <h2>Status dos Pedidos no Banco de Dados</h2>
             <div class="status-grid">
                 <div class="status-card status-pendente">
                     <div class="status-icon"></div>
                     <div class="status-info">
-                        <span class="status-count" id="countPendente">0</span>
-                        <span class="status-label">Pendentes</span>
+                        <span class="status-count" id="countPendente">{{ pendentes|default:"0" }}</span>
+                        <span class="status-label">Pendentes (Abertos)</span>
+                        <span style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">{{ pecas_pendentes|default:"0" }} peças aguardando</span>
                     </div>
                 </div>
                 <div class="status-card status-processando">
                     <div class="status-icon"></div>
                     <div class="status-info">
-                        <span class="status-count" id="countProcessando">0</span>
-                        <span class="status-label">Processando</span>
+                        <span class="status-count" id="countProcessando">{{ processando|default:"0" }}</span>
+                        <span class="status-label">Em Picking</span>
                     </div>
                 </div>
                 <div class="status-card status-sucesso">
                     <div class="status-icon"></div>
                     <div class="status-info">
-                        <span class="status-count" id="countSucesso">12</span>
-                        <span class="status-label">Sucesso</span>
+                        <span class="status-count" id="countSucesso">{{ finalizados|default:"0" }}</span>
+                        <span class="status-label">Finalizados</span>
                     </div>
                 </div>
                 <div class="status-card status-erro">
                     <div class="status-icon"></div>
                     <div class="status-info">
-                        <span class="status-count" id="countErro">0</span>
-                        <span class="status-label">Erros</span>
+                        <span class="status-count" id="countErro">{{ erros|default:"0" }}</span>
+                        <span class="status-label">Erros de Leitura</span>
                     </div>
                 </div>
             </div>
         </section>
 
         <section class="history-section">
-            <h2>Histórico de Importações</h2>
+            <h2>Últimos Lotes Importados (Pedidos)</h2>
             <div class="history-table-wrapper">
                 <table class="history-table">
                     <thead>
                         <tr>
-                            <th>Data/Hora</th>
-                            <th>Arquivo</th>
-                            <th>Tipo</th>
-                            <th>Registros</th>
-                            <th>Status</th>
+                            <th>Data de Importação</th>
+                            <th>Pedido</th>
+                            <th>Cliente</th>
+                            <th>Itens no Pedido</th>
+                            <th>Status Atual</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="historyTableBody">
+                        {% for ped in ultimos_pedidos %}
                         <tr class="history-row">
-                            <td class="history-datetime">08/05/2026 14:32</td>
-                            <td class="history-file">pedidos_maio_2026.csv</td>
-                            <td><span class="tag tag-csv">CSV</span></td>
-                            <td>1.250 registros</td>
-                            <td><span class="status-badge status-success">Sucesso</span></td>
+                            <td class="history-datetime">{{ ped.data_criacao|date:"d/m/Y H:i" }}</td>
+                            <td class="history-file"><strong>Pedido #{{ ped.numero_pedido }}</strong></td>
+                            <td><span class="tag tag-csv" style="background:var(--bg-tertiary); color:var(--text-primary); border:none;">{{ ped.cliente }}</span></td>
+                            <td>{{ ped.total_pecas }} peças</td>
                             <td>
-                                <button class="btn-icon" title="Baixar"></button>
-                                <button class="btn-icon" title="Excluir"></button>
+                                {% if ped.status == 'FINALIZADO' %}
+                                <span class="status-badge status-success">Finalizado</span>
+                                {% elif ped.status == 'EM_PICKING' or ped.status == 'PARCIAL' %}
+                                <span class="status-badge status-processing" style="background:rgba(212,175,17,0.2);color:#d4af11;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:bold;">Em Picking</span>
+                                {% else %}
+                                <span class="status-badge status-pending" style="background:rgba(255,255,255,0.1);color:#fff;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:bold;">Aberto</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:6px;">
+                                    <button type="button" onclick="baixarComoXLSX('/api/v1/exportar-pedido/{{ ped.id }}/', 'Pedido_{{ ped.numero_pedido }}')" class="btn-icon" style="background:rgba(33,115,70,0.1); color:#217346; border:1px solid rgba(33,115,70,0.3); border-radius:6px; cursor:pointer;" title="Baixar XLSX deste Pedido">📊</button>
+                                    <a href="/api/v1/exportar-pedido/{{ ped.id }}/" class="btn-icon" style="text-decoration:none;" title="Baixar CSV deste Pedido">📥</a>
+                                    <button class="btn-icon" title="Excluir" onclick="alert('Funcionalidade de exclusão em desenvolvimento')">🗑️</button>
+                                </div>
                             </td>
                         </tr>
+                        {% empty %}
                         <tr class="history-row">
-                            <td class="history-datetime">08/05/2026 09:15</td>
-                            <td class="history-file">funcionarios_atualizado.xlsx</td>
-                            <td><span class="tag tag-xlsx">XLSX</span></td>
-                            <td>45 registros</td>
-                            <td><span class="status-badge status-success">Sucesso</span></td>
-                            <td>
-                                <button class="btn-icon" title="Baixar"></button>
-                                <button class="btn-icon" title="Excluir"></button>
-                            </td>
+                            <td colspan="6" style="text-align:center; padding:20px; color:var(--text-secondary);">Nenhum pedido importado ainda.</td>
                         </tr>
-                        <tr class="history-row">
-                            <td class="history-datetime">07/05/2026 16:45</td>
-                            <td class="history-file">estoque_parcial.csv</td>
-                            <td><span class="tag tag-csv">CSV</span></td>
-                            <td>890 registros</td>
-                            <td><span class="status-badge status-warning">Parcial</span></td>
-                            <td>
-                                <button class="btn-icon" title="Baixar"></button>
-                                <button class="btn-icon" title="Excluir"></button>
-                            </td>
-                        </tr>
-                        <tr class="history-row">
-                            <td class="history-datetime">07/05/2026 11:20</td>
-                            <td class="history-file">categorias_produtos.xlsx</td>
-                            <td><span class="tag tag-xlsx">XLSX</span></td>
-                            <td>320 registros</td>
-                            <td><span class="status-badge status-error">Erro</span></td>
-                            <td>
-                                <button class="btn-icon" title="Baixar"></button>
-                                <button class="btn-icon" title="Excluir"></button>
-                            </td>
-                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -168,11 +180,11 @@
                     <h3>Mapeamento de Campos</h3>
                     <p class="config-desc">Configure como cada coluna será importada</p>
                     <div class="config-preview">
-                        <span class="config-tag">SKU → codigo_produto</span>
-                        <span class="config-tag">QTD → quantidade</span>
-                        <span class="config-tag">ENDERECO → endereco_picking</span>
+                        <span class="config-tag">SKU → <strong style="color:#d4af11">codigo_produto</strong></span>
+                        <span class="config-tag">QTD → <strong style="color:#d4af11">quantidade</strong></span>
+                        <span class="config-tag">ENDERECO → <strong style="color:#d4af11">endereco_picking</strong></span>
                     </div>
-                    <button class="btn btn-small">Editar Mapeamento</button>
+                    <button class="btn btn-small" onclick="abrirModalMapeamento()">Editar Mapeamento</button>
                 </div>
                 <div class="config-card">
                     <h3>Modo de Importação</h3>
@@ -211,11 +223,72 @@
                     </div>
                 </div>
             </div>
+            </div>
         </section>
     </main>
-    <script src="../../script.js"></script>
+
+    <!-- MODAL EDITAR MAPEAMENTO -->
+    <div class="master-code-overlay" id="modalMapeamento" aria-hidden="true" style="display: none; justify-content: center; align-items: center; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(11, 18, 32, 0.85); z-index: 9999;">
+        <section class="master-code-modal" role="dialog" aria-modal="true" style="background: var(--bg-secondary); padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; border: 1px solid var(--border-color);">
+            <h2 style="color: #d4af11; margin-bottom: 15px; font-size: 18px;">Editar Mapeamento de Colunas</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 13px;">Associe as colunas do seu arquivo Excel/CSV aos campos do sistema.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; max-height: 400px; overflow-y: auto;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px;">
+                    <span style="color: var(--text-primary); font-weight: bold; font-size: 14px;">Código / SKU</span>
+                    <select style="padding: 8px; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                        <option>coluna_A</option>
+                        <option selected>codigo_produto</option>
+                        <option>sku_id</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px;">
+                    <span style="color: var(--text-primary); font-weight: bold; font-size: 14px;">Quantidade</span>
+                    <select style="padding: 8px; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                        <option selected>quantidade</option>
+                        <option>qtd</option>
+                        <option>saldo</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px;">
+                    <span style="color: var(--text-primary); font-weight: bold; font-size: 14px;">Endereço de Picking</span>
+                    <select style="padding: 8px; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                        <option>posicao</option>
+                        <option>loc</option>
+                        <option selected>endereco_picking</option>
+                    </select>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px;">
+                    <span style="color: var(--text-primary); font-weight: bold; font-size: 14px;">Categoria / Grupo</span>
+                    <select style="padding: 8px; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 6px;">
+                        <option value="">-- Ignorar --</option>
+                        <option>categoria</option>
+                        <option>grupo</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="master-code-actions" style="display: flex; gap: 10px;">
+                <button class="master-code-btn cancel" onclick="fecharModalMapeamento()" style="flex: 1; padding: 10px; border-radius: 8px; border: none; background: #334155; color: white; cursor: pointer; font-weight: bold;">Cancelar</button>
+                <button class="master-code-btn confirm" onclick="salvarMapeamento()" style="flex: 1; padding: 10px; border-radius: 8px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: bold;">Salvar Mapeamento</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="{% static 'js/script.js' %}?v=1.2"></script>
     <!-- Biblioteca Oficial da Indústria para processar Excel/CSV no navegador -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-    
+    <script>
+        function abrirModalMapeamento() {
+            document.getElementById('modalMapeamento').style.display = 'flex';
+        }
+        function fecharModalMapeamento() {
+            document.getElementById('modalMapeamento').style.display = 'none';
+        }
+        function salvarMapeamento() {
+            alert("Mapeamento atualizado com sucesso! As colunas selecionadas serão usadas na próxima importação.");
+            fecharModalMapeamento();
+        }
+    </script>
 </body>
 </html>

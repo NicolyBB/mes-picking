@@ -4,154 +4,517 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard MES - Gestão de Funcionários</title>
-    
-    <!-- Ícone e CSS gerenciados pelo motor do Django -->
+    <title>Dashboard MES — Funcionários</title>
     <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 </head>
 <body class="dashboard-mes">
-    <header>
-        <div class="header-left">
-            <div class="logo-container">
-                <span class="logo-text">MES</span>
-                <span class="logo-subtitle">PICKING</span>
+<form style="display:none;">{% csrf_token %}</form>
+<header>
+    <div class="header-left">
+        <div class="logo-container"><span class="logo-text">MES</span><span class="logo-subtitle">PICKING</span></div>
+        <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="kyly-logo">
+    </div>
+    <div class="header-right">
+        <button class="theme-toggle" id="themeToggle" title="Tema"><span class="theme-icon">🌙</span></button>
+        <span class="data-atual" id="dataAtual"></span>
+    </div>
+</header>
+
+<nav class="nav-menu">
+    <a href="{% url 'dashboard_kpis' %}" class="nav-item">KPIs Tempo Real</a>
+    <a href="{% url 'aging_stock' %}" class="nav-item">Aging Stock</a>
+    <a href="{% url 'painel_operacoes' %}" class="nav-item">Painel do Supervisor</a>
+    {% if perfil_usuario == 'ADM' %}
+    <a href="{% url 'importacao' %}" class="nav-item">Importação</a>
+    <a href="{% url 'funcionarios' %}" class="nav-item active">Funcionários</a>
+    <a href="{% url 'gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
+    <a href="{% url 'webhooks' %}" class="nav-item">Webhooks</a>
+    {% endif %}
+</nav>
+
+<main class="dashboard">
+    <section class="section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+            <h2 style="margin:0;">👥 Funcionários (<span id="totalCount">{{ total|default:"0" }}</span>)</h2>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                <input type="text" id="buscaInput" placeholder="Buscar nome ou crachá..." oninput="buscarFuncionarios()"
+                    style="padding:10px 16px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;width:220px;">
+                <button onclick="abrirModalHistoricoGeral()"
+                    style="padding:10px 20px;background:#334155;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:6px;">
+                    📜 Logs de Auditoria
+                </button>
+                <button onclick="abrirModalCadastro()"
+                    style="padding:10px 20px;background:#28a745;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:6px;">
+                    👤 Cadastrar
+                </button>
             </div>
-            <!-- Imagem padronizada com a tag estática do Django -->
-            <img src="{% static 'img/KYLY_logo.png' %}" alt="KYLY" class="kyly-logo">
         </div>
-        <div class="header-right">
-            <button class="theme-toggle" id="themeToggle" title="Alternar tema">
-                <span class="theme-icon">🌙</span>
-            </button>
-            <span class="data-atual" id="dataAtual"></span>
+
+        <!-- Tabela -->
+        <div style="overflow-x:auto;">
+            <table id="tabelaFunc" style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="color:var(--text-secondary);font-size:11px;text-transform:uppercase;letter-spacing:1px;">
+                        <th style="padding:12px 15px;text-align:left;border-bottom:1px solid var(--border-color);">Crachá</th>
+                        <th style="padding:12px 15px;text-align:left;border-bottom:1px solid var(--border-color);">Nome</th>
+                        <th style="padding:12px 15px;text-align:left;border-bottom:1px solid var(--border-color);">Perfil</th>
+                        <th style="padding:12px 15px;text-align:left;border-bottom:1px solid var(--border-color);">Setor</th>
+                        <th style="padding:12px 15px;text-align:left;border-bottom:1px solid var(--border-color);">Supervisor</th>
+                        <th style="padding:12px 15px;text-align:left;border-bottom:1px solid var(--border-color);">Admissão</th>
+                        <th style="padding:12px 15px;text-align:left;border-bottom:1px solid var(--border-color);">Status</th>
+                        <th style="padding:12px 15px;text-align:left;border-bottom:1px solid var(--border-color);">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabela">
+                {% for f in funcionarios %}
+                    <tr class="func-row" data-id="{{ f.id }}" style="border-bottom:1px solid var(--border-color);">
+                        <td style="padding:14px 15px;color:var(--text-secondary);font-family:monospace;">{{ f.cracha }}</td>
+                        <td style="padding:14px 15px;font-weight:600;">{{ f.nome }}</td>
+                        <td style="padding:14px 15px;">
+                            <span class="badge-perfil badge-perfil-{{ f.perfil }}">{{ f.perfil }}</span>
+                        </td>
+                        <td style="padding:14px 15px;color:var(--text-secondary);">{{ f.setor|default:"—" }}</td>
+                        <td style="padding:14px 15px;color:var(--text-secondary);">{{ f.supervisor_resp|default:"Geral" }}</td>
+                        <td style="padding:14px 15px;color:var(--text-secondary);">{{ f.data_admissao|default:"—" }}</td>
+                        <td style="padding:14px 15px;">
+                            <span class="badge-status {% if f.ativo %}badge-ativo{% else %}badge-inativo{% endif %}">
+                                {% if f.ativo %}ATIVO{% else %}INATIVO{% endif %}
+                            </span>
+                        </td>
+                        <td style="padding:14px 15px;">
+                            <button class="btn-icon" data-action="editar" data-id="{{ f.id }}" title="Editar">✏️</button>
+                            <button class="btn-icon" onclick="abrirHistoricoFuncionario('{{ f.cracha }}', '{{ f.nome|escapejs }}')" title="Histórico">📋</button>
+                            <button class="btn-icon" data-action="excluir" data-id="{{ f.id }}" data-nome="{{ f.nome|escapejs }}" title="Excluir" style="color:#ef4444;">🗑️</button>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text-secondary);">Nenhum funcionário cadastrado.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
         </div>
-    </header>
-    
-    <!-- Menu de Navegação 100% Dinâmico com Rotas Django -->
-    <nav class="nav-menu">
-        <a href="{% url 'dashboard_kpis' %}" class="nav-item">KPIs Tempo Real</a>
-        <a href="{% url 'api_importar_excel' %}" class="nav-item">Importação</a>
-        <a href="{% url 'aging_stock' %}" class="nav-item">Aging Stock</a>
-        <a href="{% url 'dashboard_funcionarios' %}" class="nav-item active">Funcionários</a>
-        <a href="{% url 'dashboard_gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
-        <a href="{% url 'dashboard_webhooks' %}" class="nav-item">Webhooks</a>
-    </nav>
+    </section>
+</main>
 
-    <main class="dashboard">
-        <section class="section">
-            
-            <!-- Cabeçalho da Seção com Busca e Ação ADM -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
-                <h2 style="margin: 0;">Equipe Operacional (6)</h2>
-                
-                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <div class="search-box" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; padding: 5px 15px; display: flex; align-items: center;">
-                        <span style="margin-right: 10px; color: var(--text-secondary);">🔍</span>
-                        <input type="text" placeholder="Buscar crachá ou nome..." style="background: transparent; border: none; color: var(--text-primary); outline: none; width: 220px;">
-                    </div>
-                    <!-- Na VM, este botão abrirá o Modal para inserir (INSERT INTO) na tabela USUARIO -->
-                    <button class="btn-primary" style="padding: 10px 20px; font-size: 14px; background: #28a745; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">
-                        + Cadastrar
-                    </button>
+<!-- MODAL CADASTRO / EDIÇÃO -->
+<div id="modalFuncionario" style="display:none;position:fixed;inset:0;background:rgba(10,15,26,.85);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-secondary);border:1px solid var(--border-color);padding:32px;border-radius:16px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+        <h3 id="modalTitle" style="margin-bottom:24px;color:var(--text-primary);">Cadastrar Funcionário</h3>
+        <input type="hidden" id="funcId">
+
+        <div style="display:flex;flex-direction:column;gap:14px;">
+            <div>
+                <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Nome</label>
+                <input id="funcNome" type="text" placeholder="Nome completo"
+                    style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Setor de Atuação</label>
+                    <input id="funcSetor" type="text" placeholder="A, B, C..."
+                        style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;">
+                </div>
+                <div>
+                    <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Turno</label>
+                    <select id="funcTurno" style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);">
+                        <option value="">Selecione</option>
+                        <option value="MANHA">Manhã</option>
+                        <option value="TARDE">Tarde</option>
+                        <option value="NOITE">Noite</option>
+                    </select>
                 </div>
             </div>
-
-            <!-- Grade de Funcionários com Dados Reais Injetados -->
-            <div class="funcionarios-grid">
-                
-                <!-- Operadora Top Performance -->
-                <div class="funcionario-card" style="border-left: 3px solid #d4af11;">
-                    <div class="func-avatar" style="background: linear-gradient(135deg, #d4af11, #b8940f); color: #003366;">RC</div>
-                    <div class="func-info">
-                        <span class="func-nome">Renata Cruz <small style="color: var(--text-secondary); margin-left: 5px;">(K-1345)</small></span>
-                        <span class="func-setor">COLABORADOR · Setor A · T1</span>
-                    </div>
-                    <div class="func-status online" title="Ativo" style="color: #28a745; font-size: 10px;">🟢</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Crachá</label>
+                    <input id="funcCracha" type="text" placeholder="K-0000"
+                        style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;">
                 </div>
-
-                <!-- Operadora -->
-                <div class="funcionario-card">
-                    <div class="func-avatar">CM</div>
-                    <div class="func-info">
-                        <span class="func-nome">Carla Mendes <small style="color: var(--text-secondary); margin-left: 5px;">(K-1042)</small></span>
-                        <span class="func-setor">COLABORADOR · Setor A · T1</span>
-                    </div>
-                    <div class="func-status online" title="Ativo" style="color: #28a745; font-size: 10px;">🟢</div>
+                <div>
+                    <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Admissão</label>
+                    <input id="funcAdmissao" type="date"
+                        style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;">
                 </div>
-
-                <!-- Operador -->
-                <div class="funcionario-card">
-                    <div class="func-avatar">BL</div>
-                    <div class="func-info">
-                        <span class="func-nome">Bruno Lima <small style="color: var(--text-secondary); margin-left: 5px;">(K-1188)</small></span>
-                        <span class="func-setor">COLABORADOR · Setor B · T2</span>
-                    </div>
-                    <div class="func-status online" title="Ativo" style="color: #28a745; font-size: 10px;">🟢</div>
-                </div>
-
-                <!-- Supervisora (Destaque Visual) -->
-                <div class="funcionario-card" style="border: 1px solid #003366; background: rgba(0, 51, 102, 0.1);">
-                    <div class="func-avatar" style="border-color: #003366; color: #003366; background: #fff;">PS</div>
-                    <div class="func-info">
-                        <span class="func-nome" style="font-weight: 800;">Patrícia Souza <small style="color: var(--text-secondary); margin-left: 5px;">(K-0987)</small></span>
-                        <span class="func-setor" style="color: #d4af11; font-weight: bold;">SUPERVISOR · Setor C · T1</span>
-                    </div>
-                    <div class="func-status online" title="Ativo" style="color: #28a745; font-size: 10px;">🟢</div>
-                </div>
-
-                <!-- Operador Inativo -->
-                <div class="funcionario-card" style="opacity: 0.6;">
-                    <div class="func-avatar" style="border-color: #ff6b6b; color: #ff6b6b;">DA</div>
-                    <div class="func-info">
-                        <span class="func-nome">Diego Antunes <small style="color: var(--text-secondary); margin-left: 5px;">(K-1230)</small></span>
-                        <span class="func-setor">COLABORADOR · Setor D · T3</span>
-                    </div>
-                    <div class="func-status away" title="Inativo" style="color: #ff6b6b; font-size: 10px;">🔴</div>
-                </div>
-
-                <!-- Operador -->
-                <div class="funcionario-card">
-                    <div class="func-avatar">FG</div>
-                    <div class="func-info">
-                        <span class="func-nome">Felipe Gomes <small style="color: var(--text-secondary); margin-left: 5px;">(K-1502)</small></span>
-                        <span class="func-setor">COLABORADOR · Setor E · T2</span>
-                    </div>
-                    <div class="func-status online" title="Ativo" style="color: #28a745; font-size: 10px;">🟢</div>
-                </div>
-
             </div>
-        </section>
-    </main>
-
-    <!-- Modal de Cadastro de Funcionário (Oculto por padrão, acionado pelo botão + Cadastrar) -->
-    <div id="modal-cadastrar" class="modal-parcial" style="display: none;">
-        <div class="modal-conteudo" style="background: var(--bg-secondary); border: 1px solid var(--accent); padding: 30px; border-radius: 12px; width: 400px; text-align: left;">
-            <h3 style="color: var(--text-primary); margin-bottom: 20px;">Cadastrar Novo Funcionário</h3>
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                <input type="text" placeholder="Nome Completo" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
-                <input type="text" placeholder="Código Crachá (Ex: K-9999)" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
-                <select style="padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: #fff;">
-                    <option value="COLABORADOR">Colaborador</option>
-                    <option value="SUPERVISOR">Supervisor</option>
-                    <option value="ADM">Administrador</option>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                    <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Perfil</label>
+                    <select id="funcPerfil" style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);">
+                        <option value="COLABORADOR">Colaborador</option>
+                        <option value="SUPERVISOR">Supervisor</option>
+                        <option value="ADM">ADM</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Setor de Atuação</label>
+                    <input id="funcSetor" type="text" placeholder="A, B, C..."
+                        style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;">
+                </div>
+            </div>
+            <div>
+                <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Atribuir a Qual Supervisor?</label>
+                <select id="funcSupervisorResp" style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);">
+                    <option value="">Nenhum / Geral</option>
+                    {% for s in supervisores %}
+                    <option value="{{ s.id }}">{{ s.cracha }} &mdash; {{ s.nome }}</option>
+                    {% endfor %}
                 </select>
-                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-                    <button onclick="document.getElementById('modal-cadastrar').style.display='none'" style="padding: 8px 15px; background: transparent; color: #fff; border: 1px solid #fff; border-radius: 6px; cursor: pointer;">Cancelar</button>
-                    <button style="padding: 8px 15px; background: #28a745; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Salvar</button>
-                </div>
             </div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--text-primary);">
+                <input type="checkbox" id="funcAtivo" checked style="width:16px;height:16px;accent-color:var(--accent);">
+                Funcionário ativo
+            </label>
+        </div>
+
+        <div id="modalFeedback" style="display:none;margin-top:12px;padding:10px;border-radius:8px;font-size:.9rem;"></div>
+
+        <div style="display:flex;gap:12px;margin-top:24px;">
+            <button onclick="fecharModal()" style="flex:1;padding:14px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:10px;cursor:pointer;font-weight:600;">Cancelar</button>
+            <button id="btnSalvar" onclick="salvarFuncionario()" style="flex:2;padding:14px;background:#28a745;color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;">Cadastrar</button>
         </div>
     </div>
+</div>
 
-    <!-- JavaScript padronizado do projeto -->
-    <script src="{% static 'js/script.js' %}"></script>
+<!-- MODAL DE HISTÓRICO (Demitido/Atividades) -->
+<div id="modalHistoricoFunc" style="display:none;position:fixed;inset:0;background:rgba(10,15,26,.85);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-secondary);border:1px solid var(--border-color);padding:32px;border-radius:16px;width:550px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+        <h3 style="margin-bottom:10px;color:var(--text-primary);">Histórico do Funcionário</h3>
+        <p id="historicoFuncNome" style="color:var(--text-secondary);font-size:14px;margin-bottom:20px;"></p>
+        
+        <input type="text" id="filtroHistorico" placeholder="Filtrar por ação (ex: demitido, transferido, pick)..." oninput="filtrarHistoricoFunc()" style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);margin-bottom:15px;outline:none;">
+        
+        <div style="overflow-y:auto;flex:1;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;color:var(--text-primary);">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border-color);color:var(--text-secondary);text-align:left;">
+                        <th style="padding:10px;">Data/Hora</th>
+                        <th style="padding:10px;">Ação / Status</th>
+                        <th style="padding:10px;">Detalhes</th>
+                    </tr>
+                </thead>
+                <tbody id="historicoFuncBody">
+                    <tr style="border-bottom:1px solid var(--border-color);" class="hist-row">
+                        <td style="padding:10px;">14/05/2026 09:30</td>
+                        <td style="padding:10px;"><span style="color:#10b981;font-weight:bold;">Admitido</span></td>
+                        <td style="padding:10px;color:var(--text-secondary);">Cadastrado no Setor A</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border-color);" class="hist-row">
+                        <td style="padding:10px;">15/05/2026 14:22</td>
+                        <td style="padding:10px;"><span style="color:#d4af11;font-weight:bold;">Transferido</span></td>
+                        <td style="padding:10px;color:var(--text-secondary);">Mudou do Setor A para Setor B</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border-color);" class="hist-row">
+                        <td style="padding:10px;">16/05/2026 10:15</td>
+                        <td style="padding:10px;"><span style="color:#ef4444;font-weight:bold;">Inativado (Demitido/Afastado)</span></td>
+                        <td style="padding:10px;color:var(--text-secondary);">Acesso bloqueado pelo ADM</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px;">
+            <button onclick="fecharHistoricoFunc()" style="padding:12px 24px;border:none;border-radius:8px;background:var(--bg-tertiary);color:var(--text-primary);cursor:pointer;font-weight:600;">Fechar</button>
+        </div>
+    </div>
+</div>
 
-    <!-- Mini-script para abrir o Modal do ADM -->
-    <script>
-        document.querySelector('.btn-primary').addEventListener('click', function() {
-            document.getElementById('modal-cadastrar').style.display = 'flex';
+<!-- MODAL DE LOGS DE AUDITORIA (GERAL) -->
+<div id="modalHistoricoGeral" style="display:none;position:fixed;inset:0;background:rgba(10,15,26,.85);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-secondary);border:1px solid var(--border-color);padding:32px;border-radius:16px;width:700px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 style="color:var(--text-primary); margin:0;">📜 Logs de Auditoria (Geral)</h3>
+            <button onclick="fecharHistoricoGeral()" style="background:transparent; border:none; color:var(--text-secondary); font-size:20px; cursor:pointer;">&times;</button>
+        </div>
+        <p style="color:var(--text-secondary);font-size:13px;margin-bottom:20px;">Registro completo de criação, modificação ou exclusão de funcionários e vínculos.</p>
+        
+        <input type="text" id="filtroHistoricoGeral" placeholder="Filtrar por nome, supervisor, ação ou autor..." oninput="filtrarHistoricoGeral()" style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);margin-bottom:15px;outline:none;">
+        
+        <div style="overflow-y:auto;flex:1;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;color:var(--text-primary);">
+                <thead>
+                    <tr style="border-bottom:1px solid var(--border-color);color:var(--text-secondary);text-align:left;">
+                        <th style="padding:10px;">Data/Hora</th>
+                        <th style="padding:10px;">Ação</th>
+                        <th style="padding:10px;">Funcionário</th>
+                        <th style="padding:10px;">Autor (ADM)</th>
+                        <th style="padding:10px;">Detalhes</th>
+                    </tr>
+                </thead>
+                <tbody id="historicoGeralBody">
+                    <tr style="border-bottom:1px solid var(--border-color);" class="hist-geral-row">
+                        <td style="padding:10px;">16/05/2026 14:10</td>
+                        <td style="padding:10px;"><span style="color:#d4af11;font-weight:bold;">Modificado</span></td>
+                        <td style="padding:10px;">João Silva</td>
+                        <td style="padding:10px;">ADM-001</td>
+                        <td style="padding:10px;color:var(--text-secondary);">Vínculo alterado de SUP-001 para SUP-002</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border-color);" class="hist-geral-row">
+                        <td style="padding:10px;">16/05/2026 12:45</td>
+                        <td style="padding:10px;"><span style="color:#10b981;font-weight:bold;">Criado</span></td>
+                        <td style="padding:10px;">Pedro Souza</td>
+                        <td style="padding:10px;">ADM-001</td>
+                        <td style="padding:10px;color:var(--text-secondary);">Novo funcionário cadastrado e atribuído a SUP-001</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid var(--border-color);" class="hist-geral-row">
+                        <td style="padding:10px;">15/05/2026 17:30</td>
+                        <td style="padding:10px;"><span style="color:#ef4444;font-weight:bold;">Excluído/Demitido</span></td>
+                        <td style="padding:10px;">Maria Santos</td>
+                        <td style="padding:10px;">ADM-001</td>
+                        <td style="padding:10px;color:var(--text-secondary);">Removido do quadro (Estava com SUP-001)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/script.js' %}"></script>
+<script>
+    // Event delegation para botoes da tabela
+    document.getElementById('corpoTabela').addEventListener('click', e => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        if (action === 'editar') editarFuncionario(id);
+        if (action === 'excluir') excluirFuncionario(id, btn.dataset.nome);
+    });
+
+    function getCookie(n){let v=null;document.cookie.split(';').forEach(c=>{c=c.trim();if(c.startsWith(n+'='))v=decodeURIComponent(c.slice(n.length+1));});return v;}
+
+    function abrirModalCadastro() {
+        document.getElementById('funcId').value = '';
+        document.getElementById('funcNome').value = '';
+        document.getElementById('funcCracha').value = '';
+        document.getElementById('funcAdmissao').value = '';
+        document.getElementById('funcPerfil').value = 'COLABORADOR';
+        document.getElementById('funcSetor').value = '';
+        document.getElementById('funcTurno').value = '';
+        document.getElementById('funcSupervisorResp').value = '';
+        document.getElementById('funcAtivo').checked = true;
+        document.getElementById('modalTitle').textContent = 'Cadastrar Funcionário';
+        document.getElementById('btnSalvar').textContent = 'Cadastrar';
+        document.getElementById('modalFeedback').style.display = 'none';
+        document.getElementById('modalFuncionario').style.display = 'flex';
+    }
+
+    async function editarFuncionario(id) {
+        const res = await fetch(`/api/funcionarios/${id}/`);
+        const d = await res.json();
+        document.getElementById('funcId').value = id;
+        document.getElementById('funcNome').value = d.nome;
+        document.getElementById('funcCracha').value = d.cracha;
+        document.getElementById('funcAdmissao').value = d.data_admissao || '';
+        document.getElementById('funcPerfil').value = d.perfil;
+        document.getElementById('funcSetor').value = d.setor || '';
+        document.getElementById('funcTurno').value = d.turno || '';
+        document.getElementById('funcSupervisorResp').value = d.supervisor_resp || '';
+        document.getElementById('funcAtivo').checked = d.ativo;
+        document.getElementById('modalTitle').textContent = 'Editar Funcionário';
+        document.getElementById('btnSalvar').textContent = 'Salvar';
+        document.getElementById('modalFeedback').style.display = 'none';
+        document.getElementById('modalFuncionario').style.display = 'flex';
+    }
+
+    function fecharModal() {
+        document.getElementById('modalFuncionario').style.display = 'none';
+    }
+
+    async function salvarFuncionario() {
+        const id = document.getElementById('funcId').value;
+        const payload = {
+            nome: document.getElementById('funcNome').value.trim(),
+            cracha: document.getElementById('funcCracha').value.trim(),
+            perfil: document.getElementById('funcPerfil').value,
+            setor: document.getElementById('funcSetor').value.trim(),
+            turno: document.getElementById('funcTurno').value.trim(),
+            supervisor_resp: document.getElementById('funcSupervisorResp').value || null,
+            data_admissao: document.getElementById('funcAdmissao').value || null,
+            ativo: document.getElementById('funcAtivo').checked,
+        };
+
+        const url = id ? `/api/funcionarios/${id}/` : '/api/funcionarios/';
+        const method = id ? 'PUT' : 'POST';
+
+        try {
+            const res = await fetch(url, {
+                method,
+                headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+                body: JSON.stringify(payload)
+            });
+            const d = await res.json();
+            if (d.status === 'sucesso') {
+                fecharModal();
+                location.reload();
+            } else {
+                mostrarModalFeedback(d.mensagem, 'error');
+            }
+        } catch(e) {
+            mostrarModalFeedback('Erro de conexão.', 'error');
+        }
+    }
+
+    async function excluirFuncionario(id, nome) {
+        if (!confirm(`Excluir "${nome}"? Esta ação não pode ser desfeita.`)) return;
+        const res = await fetch(`/api/funcionarios/${id}/`, {
+            method: 'DELETE',
+            headers: {'X-CSRFToken': getCookie('csrftoken')}
         });
-    </script>
+        const d = await res.json();
+        if (d.status === 'sucesso') location.reload();
+        else alert(d.mensagem);
+    }
+
+    function mostrarModalFeedback(msg, tipo) {
+        const el = document.getElementById('modalFeedback');
+        el.textContent = msg;
+        el.style.display = 'block';
+        el.style.background = tipo === 'error' ? 'rgba(239,68,68,.15)' : 'rgba(16,185,129,.15)';
+        el.style.color = tipo === 'error' ? '#ef4444' : '#10b981';
+        el.style.border = `1px solid ${tipo === 'error' ? 'rgba(239,68,68,.4)' : 'rgba(16,185,129,.4)'}`;
+    }
+
+    async function buscarFuncionarios() {
+        const q = document.getElementById('buscaInput').value.trim();
+        try {
+            const res = await fetch(`/api/funcionarios/?q=${encodeURIComponent(q)}`);
+            const d = await res.json();
+            document.getElementById('totalCount').textContent = d.total;
+            const tbody = document.getElementById('corpoTabela');
+            tbody.innerHTML = '';
+
+            if (!d.funcionarios || d.funcionarios.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text-secondary);">Nenhum resultado.</td></tr>';
+                return;
+            }
+
+            d.funcionarios.forEach(f => {
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid var(--border-color)';
+
+                // Crachá
+                tr.innerHTML += `<td style="padding:14px 15px;color:var(--text-secondary);font-family:monospace;">${f.cracha}</td>`;
+                // Nome
+                tr.innerHTML += `<td style="padding:14px 15px;font-weight:600;">${f.nome}</td>`;
+                // Perfil badge via classe CSS
+                tr.innerHTML += `<td style="padding:14px 15px;"><span class="badge-perfil badge-perfil-${f.perfil}">${f.perfil}</span></td>`;
+                // Setor / Turno / Admissão
+                tr.innerHTML += `<td style="padding:14px 15px;color:var(--text-secondary);">${f.setor || '—'}</td>`;
+                tr.innerHTML += `<td style="padding:14px 15px;color:var(--text-secondary);">${f.turno || '—'}</td>`;
+                tr.innerHTML += `<td style="padding:14px 15px;color:var(--text-secondary);">${f.data_admissao || '—'}</td>`;
+                // Status badge via classe CSS
+                const statusCls = f.ativo ? 'badge-ativo' : 'badge-inativo';
+                const statusTxt = f.ativo ? 'ATIVO' : 'INATIVO';
+                tr.innerHTML += `<td style="padding:14px 15px;"><span class="badge-status ${statusCls}">${statusTxt}</span></td>`;
+                // Botões — usa data-* sem nenhuma interpolação de nome
+                const tdAcoes = document.createElement('td');
+                tdAcoes.style.padding = '14px 15px';
+
+                const btnEdit = document.createElement('button');
+                btnEdit.className = 'btn-icon';
+                btnEdit.dataset.action = 'editar';
+                btnEdit.dataset.id = f.id;
+                btnEdit.textContent = '✏️';
+
+                const btnDel = document.createElement('button');
+                btnDel.className = 'btn-icon';
+                btnDel.dataset.action = 'excluir';
+                btnDel.dataset.id = f.id;
+                btnDel.dataset.nome = f.nome; // DOM cuida do escape automaticamente
+                btnDel.style.color = '#ef4444';
+                btnDel.textContent = '🗑️';
+
+                tdAcoes.appendChild(btnEdit);
+                tdAcoes.appendChild(btnDel);
+                tr.appendChild(tdAcoes);
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            console.error('Erro ao buscar funcionários:', e);
+        }
+    }
+
+    // Funções para Modal Histórico
+    async function abrirHistoricoFuncionario(id, nome) {
+        document.getElementById('historicoFuncNome').innerText = nome;
+        document.getElementById('filtroHistorico').value = '';
+        document.getElementById('modalHistoricoFunc').style.display = 'flex';
+        const tbody = document.getElementById('historicoFuncBody');
+        tbody.innerHTML = '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-secondary);">Carregando...</td></tr>';
+        try {
+            const res = await fetch(`/api/funcionarios/${id}/logs/`);
+            const d = await res.json();
+            if (!d.logs || d.logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="padding:20px;text-align:center;color:var(--text-secondary);">Sem histórico registrado.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = d.logs.map(l => {
+                const cor = l.acao==='CRIADO'?'#10b981':l.acao==='EXCLUIDO'?'#ef4444':'#d4af11';
+                return `<tr style="border-bottom:1px solid var(--border-color);" class="hist-row">
+                    <td style="padding:10px;">${l.data_hora}</td>
+                    <td style="padding:10px;"><span style="color:${cor};font-weight:bold;">${l.acao}</span></td>
+                    <td style="padding:10px;color:var(--text-secondary);">${l.detalhes} <em>(por ${l.autor})</em></td>
+                </tr>`;
+            }).join('');
+        } catch(e) {
+            tbody.innerHTML = '<tr><td colspan="3" style="padding:20px;text-align:center;color:#ef4444;">Erro ao carregar.</td></tr>';
+        }
+    }
+    function fecharHistoricoFunc() {
+        document.getElementById('modalHistoricoFunc').style.display = 'none';
+    }
+    function filtrarHistoricoFunc() {
+        const term = document.getElementById('filtroHistorico').value.toLowerCase();
+        document.querySelectorAll('#historicoFuncBody .hist-row').forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
+        });
+    }
+
+    // Modal Logs de Auditoria Geral
+    async function abrirModalHistoricoGeral() {
+        document.getElementById('filtroHistoricoGeral').value = '';
+        document.getElementById('modalHistoricoGeral').style.display = 'flex';
+        const tbody = document.getElementById('historicoGeralBody');
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-secondary);">Carregando...</td></tr>';
+        try {
+            // Busca todos funcionarios e concatena logs — simplificado via endpoint futuro
+            const res = await fetch('/api/funcionarios/');
+            const d = await res.json();
+            const rows = [];
+            for (const f of (d.funcionarios || [])) {
+                const lr = await fetch(`/api/funcionarios/${f.id}/logs/`);
+                const ld = await lr.json();
+                (ld.logs || []).forEach(l => rows.push({...l, func: f.nome}));
+            }
+            rows.sort((a,b) => b.data_hora.localeCompare(a.data_hora));
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-secondary);">Sem registros.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = rows.map(l => {
+                const cor = l.acao==='CRIADO'?'#10b981':l.acao==='EXCLUIDO'?'#ef4444':'#d4af11';
+                return `<tr style="border-bottom:1px solid var(--border-color);" class="hist-geral-row">
+                    <td style="padding:10px;">${l.data_hora}</td>
+                    <td style="padding:10px;"><span style="color:${cor};font-weight:bold;">${l.acao}</span></td>
+                    <td style="padding:10px;">${l.func}</td>
+                    <td style="padding:10px;">${l.autor}</td>
+                    <td style="padding:10px;color:var(--text-secondary);">${l.detalhes}</td>
+                </tr>`;
+            }).join('');
+        } catch(e) {
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#ef4444;">Erro ao carregar.</td></tr>';
+        }
+    }
+    function fecharHistoricoGeral() {
+        document.getElementById('modalHistoricoGeral').style.display = 'none';
+    }
+    function filtrarHistoricoGeral() {
+        const term = document.getElementById('filtroHistoricoGeral').value.toLowerCase();
+        document.querySelectorAll('#historicoGeralBody .hist-geral-row').forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
+        });
+    }
+</script>
 </body>
 </html>

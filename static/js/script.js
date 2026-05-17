@@ -7,35 +7,127 @@
     "use strict";
 
     // ==========================================================================
-    // DADOS SIMULADOS (MOCK) - Dashboard
+    // DADOS REAIS - Dashboard (Sem Mock Data)
     // ==========================================================================
-    const OPERATORS_DATA = [
-        { id: "K-1042", name: "Carla Mendes", location: "Corredor A02", status: "online", pph: 142, caixa: "06772401", sinal: "agora", details: { matricula: "K-1042", setor: "Corredor A02", tempoOnline: "4h 32m", ultimasCaixas: ["06772401", "06772402", "06772403"], excecoes: 0, acuracia: "99.8%", producaoDia: "1.254 unidades" } },
-        { id: "K-1188", name: "Bruno Lima", location: "Corredor B07", status: "online", pph: 128, caixa: "06772419", sinal: "12s", details: { matricula: "K-1188", setor: "Corredor B07", tempoOnline: "5h 15m", ultimasCaixas: ["06772419", "06772418", "06772417"], excecoes: 1, acuracia: "98.5%", producaoDia: "1.102 unidades" } },
-        { id: "K-0987", name: "Patrícia Souza", location: "Corredor C03", status: "idle", pph: 95, caixa: "06772422", sinal: "2m", details: { matricula: "K-0987", setor: "Corredor C03", tempoOnline: "3h 45m", ultimasCaixas: ["06772422", "06772421", "06772420"], excecoes: 0, acuracia: "99.1%", producaoDia: "845 unidades" } },
-        { id: "K-1230", name: "Diego Antunes", location: "Corredor D11", status: "error", pph: 0, caixa: "06772430", sinal: "7m", details: { matricula: "K-1230", setor: "Corredor D11", tempoOnline: "1h 20m", ultimasCaixas: ["06772430", "06772429"], excecoes: 3, acuracia: "95.2%", producaoDia: "512 unidades" } },
-        { id: "K-1345", name: "Renata Cruz", location: "Corredor A05", status: "online", pph: 156, caixa: "06772441", sinal: "agora", details: { matricula: "K-1345", setor: "Corredor A05", tempoOnline: "6h", ultimasCaixas: ["06772441", "06772440", "06772439"], excecoes: 0, acuracia: "99.9%", producaoDia: "1.456 unidades" } },
-        { id: "K-1502", name: "Felipe Gomes", location: "Corredor E02", status: "online", pph: 110, caixa: "06772455", sinal: "8s", details: { matricula: "K-1502", setor: "Corredor E02", tempoOnline: "4h 50m", ultimasCaixas: ["06772455", "06772454", "06772453"], excecoes: 2, acuracia: "98.7%", producaoDia: "998 unidades" } }
-    ];
-
-    const EXCEPTIONS_DATA = [
-        { id: "EX-9981", operator: "Bruno Lima", time: "há 1 min", type: "Pular SKU", typeClass: "skip", reason: "Falta de peça no endereço B07.04.2A" },
-        { id: "EX-9979", operator: "Patrícia Souza", time: "há 4 min", type: "Saldo Zero", typeClass: "balance", reason: "Ref 1000044 sem saldo físico" },
-        { id: "EX-9975", operator: "Renata Cruz", time: "há 9 min", type: "Peça Danificada", typeClass: "damage", reason: "Ref 1000022 - costura aberta" }
-    ];
+    let OPERATORS_DATA = [];
+    let EXCEPTIONS_DATA = [];
 
     // INICIALIZAÇÃO PRINCIPAL
     document.addEventListener("DOMContentLoaded", function () {
         setupThemeToggle();
         setupKeyboardNav();
         atualizarData();
-        calcularBarrasGrafico();
         setupImportacao();
-        setupPainelOperacoes();
-        
+
+        // Se estiver no Painel de Operações, carrega os dados
+        if (window.location.pathname.includes('/painel-operacoes')) {
+            setupPainelOperacoes();
+            setInterval(carregarEquipeTempoReal, 5000); // Poll a cada 5s
+        }
+
+        // Se estiver no Dashboard ADM
+        if (window.location.pathname.includes('/dashboard') && !window.location.pathname.includes('/painel')) {
+            if (typeof calcularBarrasGrafico === "function") calcularBarrasGrafico();
+            setInterval(atualizarDashboardKpisGlobal, 5000); // Atualiza os blocos
+        }
+
         // Habilita as leituras em todas as telas
         setupEntradasHibridas();
+
+        // Injeta automaticamente o ícone de WiFi no cabeçalho
+        const header = document.querySelector('header');
+        if (header && !document.getElementById('wifi-status')) {
+            const wifiSpan = document.createElement('span');
+            wifiSpan.id = 'wifi-status';
+            wifiSpan.style.cssText = "position: absolute; right: 15px; top: 15px; font-size: 20px;";
+            wifiSpan.innerHTML = navigator.onLine ? "📶" : "📵";
+            if (!window.location.pathname.includes('painel')) {
+                header.style.position = 'relative'; // garante que o absolute funciona
+                header.appendChild(wifiSpan);
+            }
+
+            window.addEventListener('online', () => wifiSpan.innerHTML = "📶");
+            window.addEventListener('offline', () => wifiSpan.innerHTML = "📵");
+        }
+
+        // Carrega dados reais do banco ao entrar na tela de picking
+        if (document.getElementById('codigoPeca') || document.getElementById('codigoEndereco')) {
+            carregarDadosPicking();
+            if (document.getElementById('reader')) {
+                setTimeout(() => {
+                    if (typeof window.iniciarScannerCamera === "function") {
+                        window.iniciarScannerCamera('codigoPeca');
+                    }
+                }, 1000); // Aguarda a DOM e animações
+            }
+        }
     });
+
+    // ──────────────────────────────────────────────────────────────────
+    // FUNÇÕES DE COMUNICAÇÃO REAL COM O BANCO
+    // ──────────────────────────────────────────────────────────────────
+
+    async function atualizarDashboardKpisGlobal() {
+        try {
+            const res = await fetch('/api/kpis/dados/');
+            if (!res.ok) return;
+            const data = await res.json();
+
+            // Atualiza KPIs do Dashboard Principal (index.html)
+            const pphDb = document.getElementById('pph');
+            const tempoMedioDb = document.getElementById('tempoMedio');
+            const streakDb = document.getElementById('streak');
+            const taxaAcertosDb = document.getElementById('taxaAcertos');
+            const caixasHojeDb = document.getElementById('caixasHoje');
+            const errosDb = document.getElementById('erros');
+            const pecasPickadasDb = document.getElementById('pecasPickadas');
+
+            if (pphDb) pphDb.innerText = data.pph_global;
+            if (tempoMedioDb) tempoMedioDb.innerText = data.tempo_medio;
+            if (streakDb) streakDb.innerText = data.streak;
+            if (taxaAcertosDb) taxaAcertosDb.innerText = data.taxa_acerto + '%';
+            if (caixasHojeDb) caixasHojeDb.innerText = data.caixas_finalizadas;
+            if (errosDb) errosDb.innerText = data.total_erros;
+            if (pecasPickadasDb) pecasPickadasDb.innerText = data.total_pecas_bipadas;
+
+            // Se existir o layout simplificado (.kpi-card) de outra página
+            const pphEl = document.querySelector('.kpi-card:nth-child(1) h2');
+            const errosEl = document.querySelector('.kpi-card:nth-child(2) h2');
+            const acertosEl = document.querySelector('.kpi-card:nth-child(3) h2');
+            const opAtivosEl = document.querySelector('.kpi-card:nth-child(4) h2');
+
+            if (pphEl) pphEl.innerText = data.pph_global;
+            if (errosEl) errosEl.innerText = data.total_erros;
+            if (acertosEl) acertosEl.innerText = data.taxa_acerto + '%';
+            if (opAtivosEl) opAtivosEl.innerText = data.operadores_count;
+        } catch (e) {
+            console.error("Erro ao atualizar KPIs globais", e);
+        }
+    }
+
+    async function carregarEquipeTempoReal() {
+        try {
+            const res = await fetch('/api/supervisor/equipe/');
+            if (!res.ok) return;
+            const data = await res.json();
+
+            // Converte o formato do backend para o formato que a UI de cards espera
+            OPERATORS_DATA = data.equipe.map(u => ({
+                id: u.cracha,
+                name: u.nome,
+                location: u.setor || 'N/D',
+                status: u.dispositivo_status === 'ONLINE' ? 'online' : (u.dispositivo_status === 'TIMEOUT' ? 'idle' : 'error'),
+                pph: u.pph || 0,
+                caixa: u.caixa || '-',
+                sinal: u.dispositivo_status === 'ONLINE' ? 'agora' : (u.dispositivo_status === 'TIMEOUT' ? '> 5m' : 'Offline'),
+                details: { matricula: u.cracha, setor: u.setor, tempoOnline: "-", ultimasCaixas: [], excecoes: 0, acuracia: "-", producaoDia: "-" }
+            }));
+
+            if (typeof renderOperators === "function") renderOperators();
+        } catch (e) {
+            console.error("Erro ao atualizar painel operações", e);
+        }
+    }
 
     // ==========================================================================
     // 1. LEITURA HÍBRIDA (Câmera Real + Laser Datalogic + Digitação Manual)
@@ -44,84 +136,103 @@
     let contextoScanAtual = null; // Armazena qual campo estamos lendo (ex: codigoSupervisor)
 
     /**
-     * Função chamada pelo botão "Escanear com a Câmera" nas telas HTML
+     * Função chamada para escanear peças via câmera continuamente
      * @param {string} inputId - O ID do campo que receberá o valor lido
      */
-    window.iniciarScannerCamera = function(inputId) {
+    window.iniciarScannerCamera = function (inputId) {
         contextoScanAtual = inputId;
+
+        // Verifica se a div reader existe na tela atual
+        if (!document.getElementById("reader")) return;
+
+        // Modal legado (para as outras telas que não foram convertidas para câmera inline)
         const modal = document.getElementById('scanner-modal');
-        if(!modal) {
-            console.error("Modal da câmera não encontrado no HTML!");
+        if (modal) modal.style.display = 'flex';
+
+        // Configura o Scanner nativo
+        if (typeof Html5QrcodeScanner === 'undefined') {
+            console.warn('Biblioteca de câmera não carregada.');
             return;
         }
-        
-        modal.classList.remove('hidden');
-        
-        // Configura o Scanner nativo
-        html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", 
-            { fps: 10, qrbox: {width: 250, height: 250} }, 
-            false
-        );
-        
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+        if (!html5QrcodeScanner) {
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader",
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                false
+            );
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
     };
 
     // Callback de Sucesso da Câmera
     function onScanSuccess(decodedText, decodedResult) {
-        if (navigator.vibrate) navigator.vibrate(100); // Vibração física real
-        
-        window.fecharScanner();
-        
-        // Joga o valor lido no input correspondente e já chama a validação!
+        if (navigator.vibrate) navigator.vibrate(100);
+
         if (contextoScanAtual) {
             const input = document.getElementById(contextoScanAtual);
-            if(input) {
+            if (input) {
                 input.value = decodedText;
-                
-                // Roteamento inteligente: Decide qual função chamar baseado na tela atual
-                if(contextoScanAtual === 'codigoSupervisor') verificarSupervisor();
-                else if(contextoScanAtual === 'codigoColaborador') verificarColaborador();
-                else if(contextoScanAtual === 'codigoPapeleta') verificarPapeleta();
-                else if(contextoScanAtual === 'codigoEndereco') verificarEndereco();
+
+                // Simula o "Enter" na função correspondente ao campo ativo
+                if (contextoScanAtual === 'codigoSupervisor') verificarSupervisor();
+                else if (contextoScanAtual === 'codigoColaborador') verificarColaborador();
+                else if (contextoScanAtual === 'codigoPapeleta') verificarPapeleta();
+                else if (contextoScanAtual === 'codigoEndereco' || contextoScanAtual === 'codigoPeca') verificarEndereco();
             }
+        }
+
+        // Se estamos no modal legado, fechamos. Se estamos no picking inline, NÃO fechamos a câmera.
+        if (document.getElementById('scanner-modal')) {
+            fecharScannerCamera();
+        } else {
+            // Em modo inline (sempre ativo), focamos novamente no campo para a proxima peça
+            setTimeout(() => {
+                const input = document.getElementById(contextoScanAtual);
+                if (input) input.focus();
+            }, 500);
         }
     }
 
     function onScanFailure(error) {
-        // Ignorado intencionalmente. O scanner tenta ler vários frames por segundo.
+        // Ignorado intencionalmente.
     }
 
-    window.fecharScanner = function() {
+    // CORREÇÃO: nome da função alinhado com o que os botões HTML chamam
+    window.fecharScannerCamera = function () {
         if (html5QrcodeScanner) {
             html5QrcodeScanner.clear().catch(error => console.error("Erro ao limpar scanner", error));
             html5QrcodeScanner = null;
         }
         const modal = document.getElementById('scanner-modal');
-        if (modal) modal.classList.add('hidden');
+        if (modal) modal.style.display = 'none';
     };
+
+    // Alias para compatibilidade
+    window.fecharScanner = window.fecharScannerCamera;
 
     /**
      * Habilita a tecla ENTER para todos os inputs, suportando o Laser físico 
      * e a digitação manual do operador.
      */
     function setupEntradasHibridas() {
-        const inputsDeLeitura = ['codigoSupervisor', 'codigoColaborador', 'codigoPapeleta', 'codigoEndereco'];
-        
+        const inputsDeLeitura = ['codigoSupervisor', 'codigoColaborador', 'codigoPapeleta', 'codigoEndereco', 'codigoPeca'];
+
         inputsDeLeitura.forEach(id => {
             const input = document.getElementById(id);
             if (input) {
                 // Foco automático para o laser já chegar lendo
                 input.focus();
-                
+
                 // Se apertar Enter (o que o Laser do Datalogic faz automaticamente no final do bip)
-                input.addEventListener('keydown', function(e) {
+                input.addEventListener('keydown', function (e) {
                     if (e.key === 'Enter') {
                         e.preventDefault(); // Evita recarregar a tela (submit form)
-                        if(id === 'codigoSupervisor') verificarSupervisor();
-                        else if(id === 'codigoColaborador') verificarColaborador();
-                        else if(id === 'codigoPapeleta') verificarPapeleta();
-                        else if(id === 'codigoEndereco') verificarEndereco();
+                        if (id === 'codigoSupervisor') verificarSupervisor();
+                        else if (id === 'codigoColaborador') verificarColaborador();
+                        else if (id === 'codigoPapeleta') verificarPapeleta();
+                        else if (id === 'codigoEndereco') verificarEndereco();
+                        else if (id === 'codigoPeca') verificarEndereco();
                     }
                 });
             }
@@ -134,7 +245,7 @@
 
     window.verificarSupervisor = async function () {
         const input = document.getElementById("codigoSupervisor");
-        if(!input) return;
+        if (!input) return;
         const codigo = input.value.trim();
 
         if (codigo === "") {
@@ -143,139 +254,466 @@
         }
 
         atualizarStatusComunicacao('processando', 'Validando Supervisor...');
-        await novaPromessaSimulada(200); // Simulando latência de rede
 
-        // Regra: Para a apresentação, o crachá do supervisor deve começar com SUP-
-        if (codigo.toUpperCase().startsWith("SUP-") || codigo === "1234") {
-            acionarFeedbackSensorial('success');
-            // Avanço de página simulando SPA
-            setTimeout(() => { window.location.href = "Passo2colaborador.html"; }, 300);
-        } else {
-            acionarFeedbackSensorial('error');
-            alert("Acesso Negado: Código de supervisor não reconhecido no sistema.");
-            input.value = "";
-            input.focus();
-            atualizarStatusComunicacao('off', 'Aguardando Leitura...');
+        try {
+            const resposta = await fetch('/auth/api/v1/validar-cracha/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ cracha: codigo, perfil: 'SUPERVISOR' })
+            });
+            const dados = await resposta.json();
+
+            if (resposta.ok && dados.status === 'sucesso') {
+                acionarFeedbackSensorial('success');
+                atualizarStatusComunicacao('processando', `Bem-vindo, ${dados.nome}!`);
+                setTimeout(() => { window.location.href = "/coletor/operador/"; }, 500);
+            } else {
+                acionarFeedbackSensorial('error');
+                atualizarStatusComunicacao('off', 'Acesso negado.');
+                alert(dados.mensagem || 'Acesso negado.');
+                input.value = '';
+                input.focus();
+            }
+        } catch (err) {
+            console.error('Erro ao validar supervisor:', err);
+            atualizarStatusComunicacao('off', 'Erro de comunicação.');
+            alert('Erro ao conectar com o servidor.');
         }
     };
 
     window.verificarColaborador = async function () {
         const input = document.getElementById("codigoColaborador");
-        if(!input) return;
+        if (!input) return;
         const codigo = input.value.trim();
 
         if (codigo === "") return;
 
         atualizarStatusComunicacao('processando', 'Validando Operador...');
-        await novaPromessaSimulada(200);
 
-        // Regra: Para a apresentação, o crachá do operador começa com COL-
-        if (codigo.toUpperCase().startsWith("COL-") || codigo === "5678") {
-            acionarFeedbackSensorial('success');
-            setTimeout(() => { window.location.href = "../3.Abertura de caixa/index.html"; }, 300);
-        } else {
-            acionarFeedbackSensorial('error');
-            alert("Erro: Operador não cadastrado ou sem turno ativo.");
-            input.value = "";
+        try {
+            const resposta = await fetch('/auth/api/v1/validar-cracha/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ cracha: codigo, perfil: 'COLABORADOR' })
+            });
+            const dados = await resposta.json();
+
+            if (resposta.ok && dados.status === 'sucesso') {
+                acionarFeedbackSensorial('success');
+                atualizarStatusComunicacao('processando', `Operador: ${dados.nome}`);
+                setTimeout(() => { window.location.href = "/coletor/abertura/"; }, 500);
+            } else {
+                acionarFeedbackSensorial('error');
+                atualizarStatusComunicacao('off', 'Acesso negado.');
+                alert(dados.mensagem || 'Operador não cadastrado ou sem turno ativo.');
+                input.value = '';
+                input.focus();
+            }
+        } catch (err) {
+            console.error('Erro ao validar colaborador:', err);
+            atualizarStatusComunicacao('off', 'Erro de comunicação.');
+            alert('Erro ao conectar com o servidor.');
         }
     };
 
     window.verificarPapeleta = async function () {
         const input = document.getElementById("codigoPapeleta");
-        if(!input) return;
+        if (!input) return;
         const codigo = input.value.trim();
 
         if (codigo === "") return;
 
-        atualizarStatusComunicacao('processando', 'Carregando Rota da Caixa...');
-        await novaPromessaSimulada(300); // Demora um pouco mais pois puxa a lista de itens
+        atualizarStatusComunicacao('processando', 'Iniciando Sessão...');
 
-        // Regra: Papeletas iniciam com PAP-
-        if (codigo.toUpperCase().startsWith("PAP-") || codigo === "0001") {
-            acionarFeedbackSensorial('success');
-            setTimeout(() => { window.location.href = "../4.Endereco de Picking/index.html"; }, 300);
-        } else {
-            acionarFeedbackSensorial('error');
-            alert("Erro: Papeleta inválida ou já finalizada.");
-            input.value = "";
+        try {
+            const resposta = await fetch('/api/picking/iniciar/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ numero_pedido: codigo })
+            });
+            const dados = await resposta.json();
+
+            if (resposta.ok && dados.status === 'sucesso') {
+                acionarFeedbackSensorial('success');
+                atualizarStatusComunicacao('processando', `Pedido ${dados.pedido.numero} carregado!`);
+
+                // Preenche os dados reais vindos do MySQL
+                const elCliente = document.getElementById('cliente-nome');
+                const elPedido = document.getElementById('pedido-numero');
+                const elTotal = document.getElementById('pedido-total');
+                const elPeso = document.getElementById('pedido-peso');
+                const elDados = document.getElementById('dados-pedido');
+                const btnIniciar = document.getElementById('btn-iniciar');
+                const btnCamera = document.getElementById('btn-camera');
+
+                if (elCliente) elCliente.textContent = dados.pedido.cliente;
+                if (elPedido) elPedido.textContent = dados.pedido.numero;
+                if (elTotal) elTotal.textContent = dados.pedido.total_pecas + " UN";
+                if (elPeso) elPeso.textContent = parseFloat(dados.pedido.peso_bruto).toFixed(3) + "kg";
+
+                // Exibe os blocos
+                if (elDados) elDados.style.display = 'block';
+                if (btnIniciar) {
+                    btnIniciar.style.display = 'flex';
+                    btnIniciar.focus(); // joga o foco pro botao pro cara dar enter
+                }
+
+                // Esconde a API de câmera e o input
+                if (btnCamera) btnCamera.style.display = 'none';
+                if (input) {
+                    input.style.display = 'none';
+                }
+
+            } else {
+                acionarFeedbackSensorial('error');
+                atualizarStatusComunicacao('off', 'Erro ao abrir caixa.');
+                alert(dados.mensagem || 'Pedido não encontrado ou já finalizado.');
+                input.value = '';
+                input.focus();
+            }
+        } catch (err) {
+            console.error('Erro ao iniciar picking:', err);
+            atualizarStatusComunicacao('off', 'Erro de comunicação.');
+            alert('Erro ao conectar com o servidor.');
         }
     };
 
-    // O Fluxo Principal de Picking da Peça
-    window.verificarEndereco = async function () {
-        const input = document.getElementById("codigoEndereco");
-        if(!input) return;
-        const codigo = input.value.trim();
+    // ==========================================================================
+    // 2.A OFFLINE FIRST (INDEXED DB) E BACKGROUND SYNC
+    // ==========================================================================
+    let dbOffline;
+    function initIndexedDB() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open('MESPickingDB', 1);
+            req.onupgradeneeded = e => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('fila_bips')) {
+                    db.createObjectStore('fila_bips', { keyPath: 'id', autoIncrement: true });
+                }
+            };
+            req.onsuccess = e => { dbOffline = e.target.result; atualizarContadorOffline(); resolve(dbOffline); };
+            req.onerror = e => reject(e.target.error);
+        });
+    }
 
+    function atualizarContadorOffline() {
+        if (!dbOffline) return;
+        const tx = dbOffline.transaction('fila_bips', 'readonly');
+        const req = tx.objectStore('fila_bips').count();
+        req.onsuccess = () => {
+            const wifiSpan = document.getElementById('wifi-status');
+            if (wifiSpan) {
+                if (req.result > 0) {
+                    wifiSpan.innerHTML = `<span style="color:#f59e0b;font-weight:bold;font-size:14px;background:rgba(245,158,11,0.2);padding:2px 8px;border-radius:10px;margin-right:5px;">${req.result} ⏳</span> ` + (navigator.onLine ? "📶" : "📵");
+                } else {
+                    wifiSpan.innerHTML = navigator.onLine ? "📶" : "📵";
+                }
+            }
+        };
+    }
+
+    async function salvarBipOffline(payload) {
+        if (!dbOffline) await initIndexedDB();
+        return new Promise((resolve, reject) => {
+            const tx = dbOffline.transaction('fila_bips', 'readwrite');
+            const store = tx.objectStore('fila_bips');
+            store.add({ ...payload, timestamp: Date.now() });
+            tx.oncomplete = () => { atualizarContadorOffline(); resolve(); };
+            tx.onerror = e => reject(e.target.error);
+        });
+    }
+
+    async function sincronizarBipsOffline() {
+        if (!dbOffline) await initIndexedDB();
+        if (!navigator.onLine) return;
+
+        return new Promise((resolve, reject) => {
+            const tx = dbOffline.transaction('fila_bips', 'readonly');
+            const store = tx.objectStore('fila_bips');
+            const req = store.getAll();
+            req.onsuccess = async () => {
+                const fila = req.result;
+                if (fila.length === 0) return resolve();
+
+                atualizarStatusComunicacao('processando', `Sincronizando ${fila.length} itens offline...`);
+                let sucessoSync = 0;
+
+                for (const item of fila) {
+                    try {
+                        const res = await fetch('/api/picking/validar-bip/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                            body: JSON.stringify({ codigo: item.codigo, sessao_id: item.sessao_id, offline_sync: true })
+                        });
+                        if (res.ok) {
+                            const txDel = dbOffline.transaction('fila_bips', 'readwrite');
+                            txDel.objectStore('fila_bips').delete(item.id);
+                            sucessoSync++;
+                        }
+                    } catch (err) { console.error("Erro no sync do item", item, err); }
+                }
+
+                atualizarContadorOffline();
+
+                if (sucessoSync > 0) {
+                    atualizarStatusComunicacao('off', `${sucessoSync} bipes sincronizados!`);
+                    setTimeout(() => window.location.reload(), 1500); // Recarrega para pegar o estado real
+                }
+                resolve();
+            };
+        });
+    }
+
+    // Tenta sincronizar ao voltar a internet
+    window.addEventListener('online', () => {
+        atualizarContadorOffline();
+        sincronizarBipsOffline();
+    });
+    window.addEventListener('offline', atualizarContadorOffline);
+    // Tenta sincronizar ao carregar a página
+    document.addEventListener('DOMContentLoaded', () => {
+        initIndexedDB().then(() => { if (navigator.onLine) sincronizarBipsOffline(); });
+    });
+
+
+    // O Fluxo Principal de Picking da Peça - chama a API real do Django
+    window.verificarEndereco = async function () {
+        const input = document.getElementById("codigoPeca") || document.getElementById("codigoEndereco");
+        if (!input) return;
+        const codigo = input.value.trim();
         if (codigo === "") return;
 
         atualizarStatusComunicacao('processando', 'Processando SKU...');
-        
-        // Mestre de Liberação (Bip do Supervisor para etiqueta rasgada)
-        if (codigo.toUpperCase() === 'MASTER-LIBERACAO' || codigo.toUpperCase().startsWith('SUP-')) {
-            acionarFeedbackSensorial('success');
-            alert('Acesso Master Code: Item liberado manualmente pelo Supervisor.');
-            // Força a validação avançar
-            processarSucessoPicking(codigo);
+        const sessaoId = obterSessaoId();
+
+        // MODO OFFLINE (Sem Internet)
+        if (!navigator.onLine) {
+            try {
+                await salvarBipOffline({ codigo, sessao_id: sessaoId });
+                // Efeito Flash Amarelo e Bipe pendente
+                const body = document.body;
+                body.classList.remove('flash-success', 'flash-error');
+                void body.offsetWidth;
+                body.style.animation = "flash-yellow 0.4s ease";
+                setTimeout(() => body.style.animation = "", 400);
+
+                atualizarStatusComunicacao('off', 'Salvo Offline (Na Fila)');
+
+                // Em modo offline, avançamos visualmente o contador para não travar o operador
+                const p = window.atualizarProgresso();
+                if (p.atual >= p.total) {
+                    setTimeout(() => { window.location.href = '/coletor/finalizar/'; }, 1000);
+                } else {
+                    input.value = '';
+                    setTimeout(() => input.focus(), 100);
+                }
+            } catch (err) {
+                alert("Falha ao salvar no banco local!");
+            }
             return;
         }
 
-        await novaPromessaSimulada(150); // Requisição ultra rápida ao MES
+        // MODO ONLINE (Normal)
+        try {
+            const resposta = await fetch('/api/picking/validar-bip/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ codigo: codigo, sessao_id: sessaoId })
+            });
+            const dados = await resposta.json();
 
-        // Banco de dados Mock de Peças Corretas para a apresentação
-        const enderecosValidos = ["78912340", "12345678", "1000017", "A02.01.4A", "KYLY-TESTE"];
+            input.value = '';
 
-        if (enderecosValidos.includes(codigo) || codigo.length > 5) { // Aceita também códigos grandes para facilitar testes de câmera
-            processarSucessoPicking(codigo);
-        } else {
-            // ERRO (Peça não pertence à caixa ou sem saldo)
-            acionarFeedbackSensorial('error');
-            if (window.mostrarModalErro) {
-                window.mostrarModalErro(codigo);
-            } else {
-                alert("Erro: A peça escaneada não pertence a este pedido!");
+            if (dados.status === 'finalizado') {
+                acionarFeedbackSensorial('success');
+                setTimeout(() => { window.location.href = '/coletor/finalizar/'; }, 400);
+                return;
             }
-            input.value = "";
-            input.focus();
-            atualizarStatusComunicacao('off', 'Aguardando Leitura...');
+
+            if (resposta.ok && dados.status === 'sucesso') {
+                acionarFeedbackSensorial('success');
+                atualizarStatusComunicacao('off', 'Peça validada! Próxima...');
+
+                if (dados.kpis) window.atualizarDashboardKPIs(dados.kpis);
+                if (dados.proximo_item) atualizarTelaPicking(dados.proximo_item, dados.progresso);
+
+                if (input) setTimeout(() => input.focus(), 100);
+            } else {
+                acionarFeedbackSensorial('error');
+                atualizarStatusComunicacao('off', dados.mensagem || 'Erro de bipagem.');
+                if (window.mostrarModalErro) window.mostrarModalErro(codigo);
+                if (input) { input.value = ''; input.focus(); }
+            }
+        } catch (err) {
+            console.error('Erro ao validar bip:', err);
+            // Se falhou a rede no meio do fetch, tenta salvar offline
+            await salvarBipOffline({ codigo, sessao_id: sessaoId });
+            atualizarStatusComunicacao('off', 'Erro rede. Salvo Offline.');
+            input.value = '';
+            setTimeout(() => input.focus(), 100);
         }
     };
 
-    function processarSucessoPicking(codigo) {
-        acionarFeedbackSensorial('success');
-        
-        const enderecoDisplay = document.getElementById("enderecoAtual");
-        if(enderecoDisplay) enderecoDisplay.textContent = "PEÇA VALIDADA: " + codigo;
-        
-        const input = document.getElementById("codigoEndereco");
-        if(input) input.value = "";
-        
-        let resultado = window.atualizarProgresso ? window.atualizarProgresso() : null;
-        
-        // Se a barra de progresso encheu, finaliza a caixa
-        if (resultado && resultado.atual >= resultado.total) {
-            setTimeout(() => { window.location.href = "../5.FinalizaçãoPICK/index.html"; }, 400);
-        } else {
-            atualizarStatusComunicacao('off', 'Próxima peça. Aguardando...');
-            if(input) input.focus();
+    // Pular SKU - chama a API real
+    window.pularSKU = async function () {
+        atualizarStatusComunicacao('processando', 'Pulando item...');
+        try {
+            const resposta = await fetch('/api/picking/pular-sku/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ sessao_id: obterSessaoId() })
+            });
+            const dados = await resposta.json();
+            if (dados.proximo_item) {
+                atualizarTelaPicking(dados.proximo_item, dados.progresso);
+                if (dados.kpis) window.atualizarDashboardKPIs(dados.kpis);
+                atualizarStatusComunicacao('off', 'Item pulado. Próximo!');
+            } else {
+                window.location.href = '/coletor/finalizar/';
+            }
+        } catch (err) {
+            console.error('Erro ao pular SKU:', err);
+            atualizarStatusComunicacao('off', 'Erro de conexão.');
         }
+    };
+
+    // Peça danificada - chama a API real
+    window.reportarDanificada = async function () {
+        atualizarStatusComunicacao('processando', 'Registrando peça danificada...');
+        try {
+            const resposta = await fetch('/api/picking/danificada/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ sessao_id: obterSessaoId() })
+            });
+            const dados = await resposta.json();
+            if (dados.proximo_item) {
+                atualizarTelaPicking(dados.proximo_item, dados.progresso);
+                if (dados.kpis) window.atualizarDashboardKPIs(dados.kpis);
+                atualizarStatusComunicacao('off', 'Peça marcada como danificada.');
+            } else {
+                window.location.href = '/coletor/finalizar/';
+            }
+        } catch (err) {
+            console.error('Erro ao reportar danificada:', err);
+        }
+    };
+
+    // Carrega os dados reais da sessão ao entrar na tela de picking
+    window.carregarDadosPicking = async function () {
+        try {
+            const resposta = await fetch('/api/picking/status/', {
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            });
+            if (!resposta.ok) return; // sem sessão
+            const dados = await resposta.json();
+
+            window._sessaoId = dados.sessao_id;
+
+            if (dados.pedido) {
+                const prog = document.querySelector('.header-progress');
+                if (prog) prog.textContent = `${dados.pedido.pecas_bipadas}/${dados.pedido.total_pecas}`;
+                const pct = dados.pedido.total_pecas > 0
+                    ? (dados.pedido.pecas_bipadas / dados.pedido.total_pecas) * 100 : 0;
+                const barra = document.querySelector('.barra-fill');
+                if (barra) barra.style.width = pct + '%';
+                const errosEl = document.querySelector('[data-erros]');
+                if (errosEl) errosEl.textContent = dados.erros || 0;
+            }
+            if (dados.kpis) window.atualizarDashboardKPIs(dados.kpis);
+            if (dados.item_atual) atualizarTelaPicking(dados.item_atual, null);
+        } catch (err) {
+            console.warn('Não foi possível carregar sessão:', err);
+        }
+    };
+
+    let timerInterval = null;
+
+    window.atualizarDashboardKPIs = function (kpis) {
+        if (!kpis) return;
+        const pphEl = document.querySelector('[data-pph]');
+        const tempoEl = document.querySelector('[data-tempo]');
+        const streakEl = document.querySelector('[data-streak]');
+        const errosEl = document.querySelector('[data-erros]');
+
+        if (pphEl) pphEl.textContent = kpis.pph;
+        if (tempoEl) tempoEl.textContent = kpis.tempo;
+        if (streakEl) streakEl.textContent = kpis.streak;
+        if (errosEl) errosEl.textContent = kpis.erros;
+
+        // Inicia ou reinicia o cronômetro para bater os segundos localmente na tela
+        if (timerInterval) clearInterval(timerInterval);
+        if (tempoEl) {
+            timerInterval = setInterval(() => {
+                let partes = tempoEl.textContent.split(':');
+                if (partes.length === 2) {
+                    let m = parseInt(partes[0], 10);
+                    let s = parseInt(partes[1], 10);
+                    s++;
+                    if (s >= 60) { s = 0; m++; }
+                    tempoEl.textContent = (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+                }
+            }, 1000);
+        }
+    };
+
+    // Atualiza os campos visuais com o próximo item do banco
+    function atualizarTelaPicking(item, progresso) {
+        const endEl = document.getElementById('enderecoAtual');
+        if (endEl) endEl.textContent = item.endereco;
+
+        const refEl = document.getElementById('peca-ref');
+        const corEl = document.getElementById('peca-cor');
+        const tamEl = document.getElementById('peca-tam');
+
+        if (refEl) refEl.textContent = item.referencia;
+        if (corEl) corEl.textContent = item.cor;
+        if (tamEl) tamEl.textContent = item.tamanho;
+
+        if (progresso) {
+            const prog = document.querySelector('.header-progress');
+            if (prog) prog.textContent = `${progresso.atual}/${progresso.total}`;
+            const barra = document.querySelector('.barra-fill');
+            const pct = progresso.total > 0 ? (progresso.atual / progresso.total) * 100 : 0;
+            if (barra) barra.style.width = pct + '%';
+        }
+    }
+
+    function obterSessaoId() {
+        return window._sessaoId || null;
     }
 
 
     // ==========================================================================
     // 3. EFEITOS SENSORIAIS E UTILITÁRIOS (UI/UX Industrial)
     // ==========================================================================
+
+    // Pré-carrega os elementos de áudio uma única vez para latência mínima (< 200ms)
+    const _somSucesso = document.getElementById('som-sucesso');
+    const _somErro = document.getElementById('som-erro');
+
+    function _tocarSom(el) {
+        if (!el) return;
+        try {
+            el.pause();          // Garante que pare qualquer reprodução anterior
+            el.currentTime = 0;  // Reinicia do início (bipes rápidos em sequência)
+            el.play().catch(() => { }); // Suprime erros de autoplay policy do browser
+        } catch (e) { }
+    }
+
     function acionarFeedbackSensorial(tipo) {
         const body = document.body;
         body.classList.remove('flash-success', 'flash-error');
-        void body.offsetWidth; // Reflow forçado para reiniciar animação
+        void body.offsetWidth; // Reflow forçado para reiniciar animação CSS
 
         if (tipo === 'success') {
             body.classList.add('flash-success');
-            if (navigator.vibrate) navigator.vibrate([100]); // 1 vibração curta
+            if (navigator.vibrate) navigator.vibrate([100]); // 1 vibração curta = Acerto
+            _tocarSom(_somSucesso); // 🔊 Bipe curto (correto1Segundo.mp3)
         } else if (tipo === 'error') {
             body.classList.add('flash-error');
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200]); // 2 vibrações (Aleta)
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]); // 2 vibrações = Alerta
+            _tocarSom(_somErro); // 🔊 Bipe longo 2s (Errado2Segundo.mp3) — trava até OK
         }
     }
 
@@ -294,40 +732,40 @@
 
     window.atualizarProgresso = function () {
         const progressText = document.querySelector(".header-progress");
-        if(!progressText) return { atual: 0, total: 1 };
+        if (!progressText) return { atual: 0, total: 1 };
 
         let partes = progressText.textContent.split("/");
         let atual = parseInt(partes[0], 10);
         let total = parseInt(partes[1], 10);
-        
+
         // Incrementa o atual para dar efeito de avanço
         if (atual < total) atual++;
         progressText.textContent = `${atual}/${total}`;
 
         const porcentagem = (atual / total) * 100;
         const barra = document.querySelector(".barra-fill");
-        if(barra) barra.style.width = porcentagem + "%";
-        
+        if (barra) barra.style.width = porcentagem + "%";
+
         return { atual: atual, total: total };
     };
 
     window.mostrarModalErro = function (codigo) {
         const erroLabel = document.getElementById("codigo-erro");
-        if(erroLabel) erroLabel.textContent = codigo;
-        
+        if (erroLabel) erroLabel.textContent = codigo;
+
         const modal = document.getElementById("modal-erro");
-        if(modal) modal.classList.add("ativo");
-        
+        if (modal) modal.classList.add("ativo");
+
         const erroSpan = document.querySelector(".ind-value[data-erros]");
         if (erroSpan) erroSpan.textContent = parseInt(erroSpan.textContent, 10) + 1;
     };
 
-    window.fecharModal = function () {
+    window.fecharModalErro = function () {
         const modal = document.getElementById("modal-erro");
-        if(modal) modal.classList.remove("ativo");
-        
-        const inputEndereco = document.getElementById("codigoEndereco");
-        if(inputEndereco) {
+        if (modal) modal.classList.remove("ativo");
+
+        const inputEndereco = document.getElementById("codigoEndereco") || document.getElementById("codigoPeca");
+        if (inputEndereco) {
             inputEndereco.value = "";
             inputEndereco.focus();
         }
@@ -335,12 +773,12 @@
 
     window.mostrarModalParcial = function () {
         const modal = document.getElementById("modal-parcial");
-        if(modal) modal.classList.add("ativo");
+        if (modal) modal.classList.add("ativo");
     };
 
     window.fecharModalParcial = function () {
         const modal = document.getElementById("modal-parcial");
-        if(modal) modal.classList.remove("ativo");
+        if (modal) modal.classList.remove("ativo");
     };
 
     window.confirmarParcial = function () {
@@ -350,13 +788,13 @@
 
     window.proximaCaixa = function () {
         const modal = document.getElementById("modal-sucesso");
-        if(modal) modal.classList.add("ativo");
+        if (modal) modal.classList.add("ativo");
     };
 
     window.fecharModalSucesso = function () {
         const modal = document.getElementById("modal-sucesso");
-        if(modal) modal.classList.remove("ativo");
-        window.location.href = "../1.Aguardandosupervisor/index.html";
+        if (modal) modal.classList.remove("ativo");
+        window.location.href = "/coletor/supervisor/";
     };
 
 
@@ -406,12 +844,14 @@
                 for (let file of selectedFiles) {
                     await lerEProcessarArquivoLocal(file);
                 }
-                
-                alert("✅ Arquivo processado com sucesso! Os dados JSON reais foram extraídos no F12 (Console) e estão prontos para o Django.");
-                
+
+                alert("✅ Arquivo importado com sucesso! Os dados foram processados e salvos no Banco de Dados pelo Django.");
+
                 selectedFiles = [];
                 fileInput.value = "";
                 renderFiles();
+
+                window.location.reload();
 
             } catch (error) {
                 console.error("Erro na leitura:", error);
@@ -443,10 +883,28 @@
                         const workbook = XLSX.read(data, { type: 'array' });
                         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                         const jsonExtraido = XLSX.utils.sheet_to_json(worksheet);
-                        
+
                         console.log(`[DADOS EXTRAÍDOS] -> ${file.name}:`, jsonExtraido);
-                        await new Promise(r => setTimeout(r, 600)); // Delay estético
-                        resolve(jsonExtraido);
+
+                        // Faz o envio real para o backend
+                        try {
+                            const res = await fetch('/api/v1/importar-pedidos/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCookie('csrftoken')
+                                },
+                                body: JSON.stringify({ arquivo: file.name, dados: jsonExtraido })
+                            });
+                            const result = await res.json();
+                            if (!res.ok || result.status === 'erro') {
+                                throw new Error(result.mensagem || "Erro na importação pelo servidor");
+                            }
+                            console.log(`[RESPOSTA SERVIDOR] ->`, result);
+                            resolve(jsonExtraido);
+                        } catch (err) {
+                            reject(err);
+                        }
                     } catch (err) {
                         reject(err);
                     }
@@ -578,7 +1036,13 @@
     }
 
     function setupPainelOperacoes() {
-        const elements = {
+        // ⚡ GUARD: Este painel usa dados reais via carregarEquipe() no template.
+        // O mock OPERATORS_DATA NÃO deve sobrescrever os dados da API real.
+        // Detectamos o painel real pelo atributo data-real-api no operatorsGrid.
+        const operatorsGridEl = document.getElementById('operatorsGrid');
+        if (operatorsGridEl && operatorsGridEl.hasAttribute('data-real-api')) return;
+
+        window.painelElements = {
             operatorsGrid: document.getElementById("operatorsGrid"),
             exceptionsList: document.getElementById("exceptionsList"),
             searchInput: document.getElementById("searchInput"),
@@ -601,6 +1065,7 @@
             badgeExcecoes: document.getElementById("badgeExcecoes"),
             pphMedio: document.getElementById("pphMedio")
         };
+        const elements = window.painelElements;
         if (!elements.operatorsGrid || !elements.exceptionsList) return;
 
         const state = {
@@ -640,7 +1105,7 @@
             const labels = { hoje: "Hoje", ontem: "Ontem", "7dias": "7 dias", "30dias": "30 dias", personalizado: "Personalizado" };
             state.currentFilter = filter;
             elements.filterButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.filter === filter));
-            elements.filterCurrents.forEach(curr => current.textContent = labels[filter] || "Hoje");
+            elements.filterCurrents.forEach(curr => curr.textContent = labels[filter] || "Hoje");
         }
 
         function handleSearch(value) {
@@ -650,9 +1115,12 @@
             renderOperators();
         }
 
-        function renderOperators() {
+        window.renderOperators = function () {
+            if (!window.painelElements) return;
+            const elements = window.painelElements;
+            state.operators = OPERATORS_DATA;
             if (state.operators.length === 0) {
-                elements.operatorsGrid.innerHTML = `<div class="empty-state">Nenhum operador encontrado para "${escapeHtml(state.searchQuery)}".</div>`;
+                elements.operatorsGrid.innerHTML = `<div class="empty-state">Nenhum operador encontrado.</div>`;
                 return;
             }
             elements.operatorsGrid.innerHTML = state.operators.map(createOperatorCard).join("");
@@ -775,5 +1243,38 @@
             .replaceAll('"', "&quot;")
             .replaceAll("'", "&#039;");
     }
+
+    // Utilitário para pegar o CSRF token do cookie (exigido pelo Django em POSTs)
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Expõe para escopos globais (inline scripts no HTML)
+    window.getCookie = getCookie;
+
+    window.baixarComoXLSX = async function (url, filename) {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Erro na rede ou servidor.");
+            const csvText = await response.text();
+
+            // Reutiliza a biblioteca SheetJS (que já está na página)
+            const workbook = XLSX.read(csvText, { type: 'string', raw: true });
+            XLSX.writeFile(workbook, filename + '.xlsx');
+        } catch (e) {
+            alert("Erro ao gerar o arquivo XLSX: " + e.message);
+        }
+    };
 
 }());
