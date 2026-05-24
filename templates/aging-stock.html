@@ -39,6 +39,7 @@
         <a href="{% url 'funcionarios' %}" class="nav-item">Funcionários</a>
         <a href="{% url 'gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
         <a href="{% url 'webhooks' %}" class="nav-item">Webhooks</a>
+        <a href="{% url 'heartbeat_monitor' %}" class="nav-item">Dispositivos</a>
         {% endif %}
     </nav>
 
@@ -78,7 +79,7 @@
             <h2>⚠️ Peças paradas no Estoque (Ação Recomendada)</h2>
             <div class="aging-list">
                 {% for item in itens_aging %}
-                <div class="aging-item {{ item.nivel }}" id="aging-row-{{ item.sku }}">
+                <div class="aging-item {{ item.nivel }}" id="aging-row-{{ item.sku }}" {% if forloop.counter0 >= 5 %}style="display:none;" data-hidden-default="true"{% endif %}>
                     <div class="aging-info">
                         <span class="aging-code">Ref {{ item.sku }}</span>
                         <span class="aging-name" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px; display: block;">Cor {{ item.cor }}</span>
@@ -102,6 +103,13 @@
                 <div style="text-align: center; color: var(--text-secondary); padding: 20px;">Nenhum item pendente no estoque no momento.</div>
                 {% endfor %}
             </div>
+            {% if total_skus > 5 %}
+            <div style="text-align:center; margin-top:15px;">
+                <button id="btnMostrarTodos" onclick="mostrarTodosAging()" style="background:transparent; border:1px solid var(--border-color); color:var(--text-primary); padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px; transition:all 0.2s;">
+                    🔽 Mostrar mais {{ total_skus|add:"-5" }} itens...
+                </button>
+            </div>
+            {% endif %}
         </section>
 
         <!-- Faixas de Envelhecimento que o seu CSS possuía classes mas foram cortadas no HTML -->
@@ -144,13 +152,8 @@
                         </tr>
                     </thead>
                     <tbody id="historicoAgingBody">
-                        <!-- Histórico dinâmico -->
-                        <tr style="border-bottom: 1px solid var(--border-color);">
-                            <td style="padding: 10px; color: var(--text-primary);">16/05/2026 14:30</td>
-                            <td style="padding: 10px; color: var(--text-primary);"><strong>Ref 1000012</strong><br><small>Cor 00010 · Setor A01</small></td>
-                            <td style="padding: 10px;"><span style="color: #ef4444; font-weight: bold;">Removido (Baixa)</span></td>
-                            <td style="padding: 10px; color: var(--text-secondary);">Peças liquidadas do estoque via inventário.</td>
-                        </tr>
+                        <!-- Histórico dinâmico vindo da API -->
+                        <tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-secondary);">Carregando histórico...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -212,6 +215,46 @@
         function fecharModalAging() {
             document.getElementById('modalLiquidarAging').style.display = 'none';
         }
+
+        function mostrarTodosAging() {
+            document.querySelectorAll('[data-hidden-default="true"]').forEach(el => {
+                el.style.display = 'flex';
+                el.removeAttribute('data-hidden-default');
+            });
+            const btn = document.getElementById('btnMostrarTodos');
+            if (btn) btn.style.display = 'none';
+        }
+
+        async function carregarHistoricoAging() {
+            try {
+                const res = await fetch('/api/aging-stock/historico/');
+                const d = await res.json();
+                if (d.status === 'sucesso') {
+                    const tbody = document.getElementById('historicoAgingBody');
+                    tbody.innerHTML = '';
+                    if (d.historico.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-secondary);">Nenhum histórico registrado.</td></tr>';
+                        return;
+                    }
+                    d.historico.forEach(log => {
+                        let acaoHtml = '';
+                        if (log.acao === 'REMOVIDO') acaoHtml = '<span style="color: #ef4444; font-weight: bold;">Removido (Baixa)</span>';
+                        else if (log.acao === 'ATRIBUIDO') acaoHtml = `<span style="color: #d4af11; font-weight: bold;">Atribuído (${log.supervisor})</span>`;
+                        else acaoHtml = `<span style="color: #10b981; font-weight: bold;">Resolvido</span>`;
+
+                        tbody.innerHTML += `
+                            <tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 10px; color: var(--text-primary);">${log.data_hora}</td>
+                                <td style="padding: 10px; color: var(--text-primary);"><strong>Ref ${log.sku}</strong></td>
+                                <td style="padding: 10px;">${acaoHtml}</td>
+                                <td style="padding: 10px; color: var(--text-secondary);">${log.motivo}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            } catch(e) { console.error('Erro ao carregar histórico:', e); }
+        }
+        carregarHistoricoAging();
 
         function toggleSupervisorSelect() {
             const acao = document.getElementById('acaoAging').value;

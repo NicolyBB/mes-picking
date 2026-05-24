@@ -34,6 +34,9 @@
         // Habilita as leituras em todas as telas
         setupEntradasHibridas();
 
+        // Inicializa o monitoramento de batimento cardíaco (Heartbeat)
+        iniciarHeartbeat();
+
         // Injeta automaticamente o ícone de WiFi no cabeçalho
         const header = document.querySelector('header');
         if (header && !document.getElementById('wifi-status')) {
@@ -69,7 +72,7 @@
 
     async function atualizarDashboardKpisGlobal() {
         try {
-            const res = await fetch('/api/kpis/dados/');
+            const res = await fetch(`/api/kpis/dados/?_=${Date.now()}`);
             if (!res.ok) return;
             const data = await res.json();
 
@@ -107,7 +110,7 @@
 
     async function carregarEquipeTempoReal() {
         try {
-            const res = await fetch('/api/supervisor/equipe/');
+            const res = await fetch(`/api/supervisor/equipe/?_=${Date.now()}`);
             if (!res.ok) return;
             const data = await res.json();
 
@@ -336,6 +339,15 @@
             if (resposta.ok && dados.status === 'sucesso') {
                 acionarFeedbackSensorial('success');
                 atualizarStatusComunicacao('processando', `Pedido ${dados.pedido.numero} carregado!`);
+                if (dados.sessao_id) {
+                    localStorage.setItem('sessao_picking_id', dados.sessao_id);
+                }
+                if (dados.pedido) {
+                    localStorage.setItem('cached_pedido', JSON.stringify(dados.pedido));
+                }
+                if (dados.itens_pendentes) {
+                    localStorage.setItem('itens_pendentes', JSON.stringify(dados.itens_pendentes));
+                }
 
                 // Preenche os dados reais vindos do MySQL
                 const elCliente = document.getElementById('cliente-nome');
@@ -445,10 +457,12 @@
                             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
                             body: JSON.stringify({ codigo: item.codigo, sessao_id: item.sessao_id, offline_sync: true })
                         });
-                        if (res.ok) {
+                        if (res.status < 500) {
                             const txDel = dbOffline.transaction('fila_bips', 'readwrite');
                             txDel.objectStore('fila_bips').delete(item.id);
-                            sucessoSync++;
+                            if (res.ok) {
+                                sucessoSync++;
+                            }
                         }
                     } catch (err) { console.error("Erro no sync do item", item, err); }
                 }
@@ -480,6 +494,10 @@
     window.verificarEndereco = async function () {
         const input = document.getElementById("codigoPeca") || document.getElementById("codigoEndereco");
         if (!input) return;
+        
+        // BLOQUEIO DO DELAY: não aceita bipe se ainda estiver no cooldown
+        if (input.dataset.bloqueado === 'true') return;
+        
         const codigo = input.value.trim();
         if (codigo === "") return;
 
@@ -489,25 +507,67 @@
         // MODO OFFLINE (Sem Internet)
         if (!navigator.onLine) {
             try {
-                await salvarBipOffline({ codigo, sessao_id: sessaoId });
-                // Efeito Flash Amarelo e Bipe pendente
-                const body = document.body;
-                body.classList.remove('flash-success', 'flash-error');
-                void body.offsetWidth;
-                body.style.animation = "flash-yellow 0.4s ease";
-                setTimeout(() => body.style.animation = "", 400);
+                let pendentes = [];
+                try {
+                    pendentes = JSON.parse(localStorage.getItem('itens_pendentes')) || [];
+                } catch (e) {}
 
-                atualizarStatusComunicacao('off', 'Salvo Offline (Na Fila)');
+                if (pendentes.length === 0) {
+                    atualizarStatusComunicacao('erro', 'Fila offline vazia ou pedido completo.');
+                    return;
+                }
 
-                // Em modo offline, avançamos visualmente o contador para não travar o operador
-                const p = window.atualizarProgresso();
-                if (p.atual >= p.total) {
-                    setTimeout(() => { window.location.href = '/coletor/finalizar/'; }, 1000);
+                const itemEsperado = pendentes[0];
+                const codigoNormalizado = codigo.trim().toUpperCase();
+                const barrasNormalizado = (itemEsperado.codigo_barras || '').trim().toUpperCase();
+                const refNormalizado = (itemEsperado.referencia || '').trim().toUpperCase();
+
+                if (codigoNormalizado === barrasNormalizado || codigoNormalizado === refNormalizado) {
+                    // BIP CORRETO OFFLINE
+                    await salvarBipOffline({ codigo, sessao_id: sessaoId });
+                    
+                    acionarFeedbackSensorial('success');
+                    atualizarStatusComunicacao('sucesso', 'Peça validada (Offline)! Próxima...');
+
+                    // Remove da lista local e salva
+                    pendentes.shift();
+                    localStorage.setItem('itens_pendentes', JSON.stringify(pendentes));
+
+                    // Atualiza progresso local
+                    const progressoElement = document.querySelector('.header-progress');
+                    let atual = 0, total = 0;
+                    if (progressoElement) {
+                        const partes = progressoElement.textContent.split('/');
+                        atual = parseInt(partes[0], 10) + 1;
+                        total = parseInt(partes[1], 10);
+                        progressoElement.textContent = `${atual}/${total}`;
+                        const pct = total > 0 ? (atual / total) * 100 : 0;
+                        const barra = document.querySelector('.barra-fill');
+                        if (barra) barra.style.width = pct + '%';
+
+                        // Salva progresso no cached_pedido
+                        let cachedPedido = JSON.parse(localStorage.getItem('cached_pedido')) || {};
+                        cachedPedido.pecas_bipadas = atual;
+                        localStorage.setItem('cached_pedido', JSON.stringify(cachedPedido));
+                    }
+
+                    // Se terminou
+                    if (pendentes.length === 0 || (total > 0 && atual >= total)) {
+                        setTimeout(() => { window.location.href = '/coletor/finalizar/'; }, 1000);
+                    } else {
+                        atualizarTelaPicking(pendentes[0], null);
+                        input.value = '';
+                        setTimeout(() => input.focus(), 100);
+                    }
                 } else {
-                    input.value = '';
-                    setTimeout(() => input.focus(), 100);
+                    // BIP INCORRETO OFFLINE
+                    acionarFeedbackSensorial('error');
+                    atualizarStatusComunicacao('erro', 'Código incorreto.');
+                    if (window.mostrarModalErro) window.mostrarModalErro(codigo);
+                    if (input) { input.value = ''; input.focus(); }
                 }
             } catch (err) {
+                console.error("Erro offline:", err);
                 alert("Falha ao salvar no banco local!");
             }
             return;
@@ -515,7 +575,7 @@
 
         // MODO ONLINE (Normal)
         try {
-            const resposta = await fetch('/api/picking/validar-bip/', {
+            const resposta = await fetch(`/api/picking/validar-bip/?_=${Date.now()}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
                 body: JSON.stringify({ codigo: codigo, sessao_id: sessaoId })
@@ -526,18 +586,45 @@
 
             if (dados.status === 'finalizado') {
                 acionarFeedbackSensorial('success');
+                // Limpa caches ao finalizar
+                localStorage.removeItem('itens_pendentes');
+                localStorage.removeItem('cached_pedido');
                 setTimeout(() => { window.location.href = '/coletor/finalizar/'; }, 400);
                 return;
             }
 
             if (resposta.ok && dados.status === 'sucesso') {
                 acionarFeedbackSensorial('success');
-                atualizarStatusComunicacao('off', 'Peça validada! Próxima...');
+                atualizarStatusComunicacao('off', 'Peça validada! Aguarde...');
 
-                if (dados.kpis) window.atualizarDashboardKPIs(dados.kpis);
+                if (dados.kpis) {
+                    localStorage.setItem('cached_kpis', JSON.stringify(dados.kpis));
+                    window.atualizarDashboardKPIs(dados.kpis);
+                }
+
+                // Atualiza lista local
+                let pendentes = [];
+                try {
+                    pendentes = JSON.parse(localStorage.getItem('itens_pendentes')) || [];
+                } catch(e) {}
+                if (pendentes.length > 0) {
+                    pendentes.shift();
+                    localStorage.setItem('itens_pendentes', JSON.stringify(pendentes));
+                }
+
+                // Atualiza progresso local
+                if (dados.progresso) {
+                    let cachedPedido = JSON.parse(localStorage.getItem('cached_pedido')) || {};
+                    cachedPedido.pecas_bipadas = dados.progresso.atual;
+                    cachedPedido.total_pecas = dados.progresso.total;
+                    localStorage.setItem('cached_pedido', JSON.stringify(cachedPedido));
+                }
+
                 if (dados.proximo_item) atualizarTelaPicking(dados.proximo_item, dados.progresso);
 
-                if (input) setTimeout(() => input.focus(), 100);
+                // ⏳ DELAY OBRIGATÓRIO DE 7 SEGUNDOS após bipe correto
+                iniciarDelayBipe(input, 7);
+
             } else {
                 acionarFeedbackSensorial('error');
                 atualizarStatusComunicacao('off', dados.mensagem || 'Erro de bipagem.');
@@ -554,14 +641,71 @@
         }
     };
 
+    /**
+     * Bloqueia o input por `segundos` e exibe um countdown visual
+     * para evitar bipagens duplas acidentais.
+     */
+    function iniciarDelayBipe(input, segundos) {
+        if (!input) return;
+        input.dataset.bloqueado = 'true';
+        input.disabled = true;
+        input.style.opacity = '0.5';
+        input.style.cursor = 'not-allowed';
+
+        // Cria ou reutiliza o elemento de countdown
+        let countdownEl = document.getElementById('countdown-delay');
+        if (!countdownEl) {
+            countdownEl = document.createElement('div');
+            countdownEl.id = 'countdown-delay';
+            countdownEl.style.cssText = [
+                'text-align:center', 'margin-top:8px', 'font-size:15px', 'font-weight:700',
+                'color:#d4af11', 'letter-spacing:1px', 'transition:opacity 0.3s'
+            ].join(';');
+            input.parentNode.insertBefore(countdownEl, input.nextSibling);
+        }
+
+        let restante = segundos;
+        countdownEl.textContent = `⏳ Aguarde ${restante}s para o próximo bipe...`;
+        countdownEl.style.display = 'block';
+        countdownEl.style.opacity = '1';
+
+        const tick = setInterval(() => {
+            restante--;
+            if (restante > 0) {
+                countdownEl.textContent = `⏳ Aguarde ${restante}s para o próximo bipe...`;
+            } else {
+                clearInterval(tick);
+                // Libera o input
+                input.dataset.bloqueado = 'false';
+                input.disabled = false;
+                input.style.opacity = '1';
+                input.style.cursor = '';
+                countdownEl.textContent = '✅ Pronto! Bipe a próxima peça.';
+                countdownEl.style.color = '#10b981';
+                setTimeout(() => {
+                    countdownEl.style.opacity = '0';
+                    setTimeout(() => { countdownEl.style.display = 'none'; }, 400);
+                    input.focus();
+                }, 800);
+                atualizarStatusComunicacao('off', 'Próxima peça!');
+            }
+        }, 1000);
+    }
+
     // Pular SKU - chama a API real
     window.pularSKU = async function () {
+        const motivo = prompt("Informe o motivo de pular este SKU:");
+        if (motivo === null) return; // cancelou
+        if (!motivo.trim()) {
+            alert("O motivo é obrigatório para pular o SKU.");
+            return;
+        }
         atualizarStatusComunicacao('processando', 'Pulando item...');
         try {
             const resposta = await fetch('/api/picking/pular-sku/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-                body: JSON.stringify({ sessao_id: obterSessaoId() })
+                body: JSON.stringify({ sessao_id: obterSessaoId(), motivo: motivo.trim() })
             });
             const dados = await resposta.json();
             if (dados.proximo_item) {
@@ -579,12 +723,18 @@
 
     // Peça danificada - chama a API real
     window.reportarDanificada = async function () {
+        const motivo = prompt("Informe o motivo da peça danificada:");
+        if (motivo === null) return; // cancelou
+        if (!motivo.trim()) {
+            alert("O motivo é obrigatório para reportar peça danificada.");
+            return;
+        }
         atualizarStatusComunicacao('processando', 'Registrando peça danificada...');
         try {
             const resposta = await fetch('/api/picking/danificada/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
-                body: JSON.stringify({ sessao_id: obterSessaoId() })
+                body: JSON.stringify({ sessao_id: obterSessaoId(), motivo: motivo.trim() })
             });
             const dados = await resposta.json();
             if (dados.proximo_item) {
@@ -602,30 +752,79 @@
     // Carrega os dados reais da sessão ao entrar na tela de picking
     window.carregarDadosPicking = async function () {
         try {
-            const resposta = await fetch('/api/picking/status/', {
+            // Se estiver offline, carrega do cache imediatamente
+            if (!navigator.onLine) {
+                carregarSessaoCacheada();
+                return;
+            }
+
+            const resposta = await fetch(`/api/picking/status/?_=${Date.now()}`, {
                 headers: { 'X-CSRFToken': getCookie('csrftoken') }
             });
             if (!resposta.ok) return; // sem sessão
             const dados = await resposta.json();
 
             window._sessaoId = dados.sessao_id;
+            if (dados.sessao_id) {
+                localStorage.setItem('sessao_picking_id', dados.sessao_id);
+            }
 
             if (dados.pedido) {
+                localStorage.setItem('cached_pedido', JSON.stringify(dados.pedido));
                 const prog = document.querySelector('.header-progress');
                 if (prog) prog.textContent = `${dados.pedido.pecas_bipadas}/${dados.pedido.total_pecas}`;
                 const pct = dados.pedido.total_pecas > 0
                     ? (dados.pedido.pecas_bipadas / dados.pedido.total_pecas) * 100 : 0;
                 const barra = document.querySelector('.barra-fill');
                 if (barra) barra.style.width = pct + '%';
+                
                 const errosEl = document.querySelector('[data-erros]');
-                if (errosEl) errosEl.textContent = dados.erros || 0;
+                if (errosEl) {
+                    errosEl.textContent = dados.erros || 0;
+                    localStorage.setItem('cached_erros', dados.erros || 0);
+                }
             }
-            if (dados.kpis) window.atualizarDashboardKPIs(dados.kpis);
+            if (dados.itens_pendentes) {
+                localStorage.setItem('itens_pendentes', JSON.stringify(dados.itens_pendentes));
+            }
+            if (dados.kpis) {
+                localStorage.setItem('cached_kpis', JSON.stringify(dados.kpis));
+                window.atualizarDashboardKPIs(dados.kpis);
+            }
             if (dados.item_atual) atualizarTelaPicking(dados.item_atual, null);
         } catch (err) {
-            console.warn('Não foi possível carregar sessão:', err);
+            console.warn('Não foi possível carregar sessão online, tentando cache:', err);
+            carregarSessaoCacheada();
         }
     };
+
+    function carregarSessaoCacheada() {
+        try {
+            const pedido = JSON.parse(localStorage.getItem('cached_pedido'));
+            const erros = localStorage.getItem('cached_erros') || 0;
+            const kpis = JSON.parse(localStorage.getItem('cached_kpis'));
+            const pendentes = JSON.parse(localStorage.getItem('itens_pendentes')) || [];
+
+            if (pedido) {
+                const prog = document.querySelector('.header-progress');
+                if (prog) prog.textContent = `${pedido.pecas_bipadas}/${pedido.total_pecas}`;
+                const pct = pedido.total_pecas > 0
+                    ? (pedido.pecas_bipadas / pedido.total_pecas) * 100 : 0;
+                const barra = document.querySelector('.barra-fill');
+                if (barra) barra.style.width = pct + '%';
+            }
+            const errosEl = document.querySelector('[data-erros]');
+            if (errosEl) errosEl.textContent = erros;
+
+            if (kpis) window.atualizarDashboardKPIs(kpis);
+
+            if (pendentes.length > 0) {
+                atualizarTelaPicking(pendentes[0], null);
+            }
+        } catch (e) {
+            console.error("Erro ao carregar sessão cacheada:", e);
+        }
+    }
 
     let timerInterval = null;
 
@@ -680,7 +879,7 @@
     }
 
     function obterSessaoId() {
-        return window._sessaoId || null;
+        return window._sessaoId || localStorage.getItem('sessao_picking_id') || null;
     }
 
 
@@ -721,7 +920,18 @@
         const statusDiv = document.getElementById('status-comunicacao');
         if (statusDiv) {
             statusDiv.className = '';
-            statusDiv.classList.add('status-' + classe);
+            let finalClasse = classe;
+            if (classe === 'off' && texto) {
+                const lowerText = texto.toLowerCase();
+                if (lowerText.includes('negado') || lowerText.includes('erro') || lowerText.includes('falha') || lowerText.includes('inválido') || lowerText.includes('não cadastrado')) {
+                    finalClasse = 'erro';
+                } else if (lowerText.includes('sucesso') || lowerText.includes('validada') || lowerText.includes('sincronizado') || lowerText.includes('carregado') || lowerText.includes('pulado') || lowerText.includes('confirmado') || lowerText.includes('finalizado') || lowerText.includes('danificada') || lowerText.includes('bem-vindo') || lowerText.includes('operador:')) {
+                    finalClasse = 'sucesso';
+                } else if (lowerText.includes('offline') || lowerText.includes('fila') || lowerText.includes('aguarde')) {
+                    finalClasse = 'alerta';
+                }
+            }
+            statusDiv.classList.add('status-' + finalClasse);
             statusDiv.textContent = texto;
         }
     }
@@ -1258,6 +1468,30 @@
             }
         }
         return cookieValue;
+    }
+
+    function iniciarHeartbeat() {
+        let dispositivoId = localStorage.getItem('dispositivo_id');
+        if (!dispositivoId) {
+            dispositivoId = 'coletor_' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem('dispositivo_id', dispositivoId);
+        }
+
+        async function enviarSinal() {
+            if (!navigator.onLine) return;
+            try {
+                await fetch('/api/heartbeat/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({ dispositivo_id: dispositivoId })
+                });
+            } catch (e) {
+                console.warn('Erro ao enviar heartbeat:', e);
+            }
+        }
+
+        enviarSinal();
+        setInterval(enviarSinal, 15000); // 15s
     }
 
     // Expõe para escopos globais (inline scripts no HTML)

@@ -21,6 +21,8 @@ class Usuario(models.Model):
     data_admissao = models.DateField(null=True, blank=True)
     ativo = models.BooleanField(default=True)
     login_status = models.BooleanField(default=False)
+    # Senha para acesso via teclado no gateway (hash SHA-256). Vazia = ADM ainda não definiu.
+    senha = models.CharField(max_length=64, blank=True, default='')
     data_cadastro = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -5,11 +5,12 @@ from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 from datetime import timedelta
-from .models import Pedido, ItemPedido, SessaoPicking, WebhookConfig, KPIDefinicao, HeartbeatLog, LogAgingStock
+from .models import Pedido, ItemPedido, SessaoPicking, WebhookConfig, KPIDefinicao, HeartbeatLog, LogAgingStock, ExcecaoPicking, MetaGlobal
 from authentication.models import Usuario
 import threading
 import requests as req_lib
 import json
+import time
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -89,6 +90,8 @@ def iniciar_picking(request):
 
     total_itens = pedido.itens.count()
     bipados = pedido.itens.filter(status='BIPADO').count()
+    itens_pendentes = pedido.itens.filter(status='PENDENTE').order_by('ordem')
+    itens_pendentes_serializados = [_serializar_item(it) for it in itens_pendentes]
 
     return Response({
         "status": "sucesso",
@@ -98,6 +101,7 @@ def iniciar_picking(request):
             "total_pecas": total_itens, "pecas_bipadas": bipados, "peso_bruto": str(pedido.peso_bruto),
         },
         "proximo_item": _serializar_item(primeiro_item),
+        "itens_pendentes": itens_pendentes_serializados,
     })
 
 
@@ -185,27 +189,39 @@ def validar_bip(request):
 @api_view(['POST'])
 def pular_sku(request):
     sessao_id = request.session.get('sessao_picking_id') or request.data.get('sessao_id')
+    motivo = request.data.get('motivo', '').strip()
     try:
         sessao = SessaoPicking.objects.get(id=sessao_id, ativa=True)
     except SessaoPicking.DoesNotExist:
         return Response({"status": "erro", "mensagem": "Sessão inválida."}, status=404)
 
-    if sessao.item_atual:
-        sessao.item_atual.status = 'PULADO'
-        sessao.item_atual.save()
+    item_pulado = sessao.item_atual
+    if item_pulado:
+        item_pulado.status = 'PULADO'
+        item_pulado.save()
 
         # Incrementar peças bipadas para progresso da barra
         sessao.pecas_bipadas = F('pecas_bipadas') + 1
         sessao.save(update_fields=['pecas_bipadas'])
         sessao.refresh_from_db(fields=['pecas_bipadas'])
 
+        # Registra a exceção no banco com o motivo do operador
+        if motivo:
+            ExcecaoPicking.objects.create(
+                sessao=sessao,
+                item=item_pulado,
+                motivo_operador=motivo,
+                status='PENDENTE'
+            )
+
         # Dispara webhook FALTA_PECA se houver configurado
         webhooks_falta = WebhookConfig.objects.filter(evento_gatilho='FALTA_PECA', ativo=True)
         for wh in webhooks_falta:
             _disparar_webhook_async(wh, {
                 "event": "FALTA_PECA",
-                "sku": sessao.item_atual.referencia,
-                "endereco": sessao.item_atual.endereco,
+                "sku": item_pulado.referencia,
+                "endereco": item_pulado.endereco,
+                "motivo": motivo,
                 "sessao_id": sessao.id,
             })
 
@@ -239,19 +255,30 @@ def pular_sku(request):
 @api_view(['POST'])
 def reportar_danificada(request):
     sessao_id = request.session.get('sessao_picking_id') or request.data.get('sessao_id')
+    motivo = request.data.get('motivo', '').strip()
     try:
         sessao = SessaoPicking.objects.get(id=sessao_id, ativa=True)
     except SessaoPicking.DoesNotExist:
         return Response({"status": "erro", "mensagem": "Sessão inválida."}, status=404)
 
-    if sessao.item_atual:
-        sessao.item_atual.status = 'DANIFICADO'
-        sessao.item_atual.save()
+    item_danificado = sessao.item_atual
+    if item_danificado:
+        item_danificado.status = 'DANIFICADO'
+        item_danificado.save()
 
         # Incrementar peças bipadas para progresso da barra
         sessao.pecas_bipadas = F('pecas_bipadas') + 1
         sessao.save(update_fields=['pecas_bipadas'])
         sessao.refresh_from_db(fields=['pecas_bipadas'])
+
+        # Registra a exceção no banco com o motivo do operador
+        if motivo:
+            ExcecaoPicking.objects.create(
+                sessao=sessao,
+                item=item_danificado,
+                motivo_operador=motivo,
+                status='PENDENTE'
+            )
 
     proximo = sessao.pedido.itens.filter(status='PENDENTE').order_by('ordem').first()
     sessao.item_atual = proximo
@@ -291,6 +318,9 @@ def status_sessao(request):
         return Response({"status": "sem_sessao"}, status=404)
 
     total = sessao.pedido.itens.count()
+    itens_pendentes = sessao.pedido.itens.filter(status='PENDENTE').order_by('ordem')
+    itens_pendentes_serializados = [_serializar_item(it) for it in itens_pendentes]
+
     return Response({
         "status": "ativa",
         "sessao_id": sessao.id,
@@ -301,8 +331,151 @@ def status_sessao(request):
             "pecas_bipadas": sessao.pecas_bipadas,
         },
         "item_atual": _serializar_item(sessao.item_atual) if sessao.item_atual else None,
+        "itens_pendentes": itens_pendentes_serializados,
         "erros": sessao.erros,
         "kpis": _calcular_kpis(sessao)
+    })
+
+
+# ═══════════════════════════════════════════════════════════════
+#  EXCEÇÕES DE PICKING — LISTAGEM, AUTORIZAÇÃO E NEGAÇÃO
+# ═══════════════════════════════════════════════════════════════
+
+@api_view(['GET'])
+def api_listar_excecoes(request):
+    """Lista exceções de picking pendentes para supervisor/ADM."""
+    if not _check_api_permission(request, ['ADM', 'SUPERVISOR']):
+        return Response({"status": "erro", "mensagem": "Acesso negado."}, status=403)
+
+    perfil = request.session.get('perfil_usuario')
+    usuario_id = request.session.get('usuario_id')
+
+    qs = ExcecaoPicking.objects.select_related(
+        'sessao__colaborador', 'item', 'supervisor_resp'
+    ).order_by('-data_criacao')
+
+    # Supervisor só vê exceções dos operadores da sua equipe
+    if perfil == 'SUPERVISOR':
+        qs = qs.filter(sessao__colaborador__supervisor_resp_id=usuario_id)
+
+    def _tipo_excecao(exc):
+        if exc.item.status == 'PULADO':
+            return 'PULAR_SKU'
+        elif exc.item.status == 'DANIFICADO':
+            return 'PECA_DANIFICADA'
+        return 'OUTRO'
+
+    pendentes = qs.filter(status='PENDENTE')
+    historico = qs.filter(status__in=['AUTORIZADO', 'NEGADO'])[:50]
+
+    def _serializar_exc(exc):
+        return {
+            "id": exc.id,
+            "operador": exc.sessao.colaborador.nome if exc.sessao.colaborador else "Desconhecido",
+            "cracha_operador": exc.sessao.colaborador.cracha if exc.sessao.colaborador else "",
+            "tipo": _tipo_excecao(exc),
+            "motivo": exc.motivo_operador,
+            "referencia": exc.item.referencia,
+            "endereco": exc.item.endereco,
+            "status": exc.status,
+            "justificativa_supervisor": exc.justificativa_supervisor,
+            "supervisor": exc.supervisor_resp.nome if exc.supervisor_resp else None,
+            "data_criacao": exc.data_criacao.strftime('%d/%m/%Y %H:%M'),
+            "data_resolucao": exc.data_resolucao.strftime('%d/%m/%Y %H:%M') if exc.data_resolucao else None,
+        }
+
+    return Response({
+        "pendentes": [_serializar_exc(e) for e in pendentes],
+        "historico": [_serializar_exc(e) for e in historico],
+        "total_pendentes": pendentes.count(),
+    })
+
+
+@csrf_exempt
+@api_view(['POST'])
+def api_autorizar_excecao(request, pk):
+    """Autoriza uma exceção de picking após validação do cachá do supervisor."""
+    if not _check_api_permission(request, ['ADM', 'SUPERVISOR']):
+        return Response({"status": "erro", "mensagem": "Acesso negado."}, status=403)
+
+    try:
+        excecao = ExcecaoPicking.objects.select_related('sessao', 'item').get(pk=pk)
+    except ExcecaoPicking.DoesNotExist:
+        return Response({"status": "erro", "mensagem": "Exceção não encontrada."}, status=404)
+
+    if excecao.status != 'PENDENTE':
+        return Response({"status": "erro", "mensagem": "Esta exceção já foi tratada."}, status=400)
+
+    # Valida o cachá informado como Master Code
+    cracha_informado = request.data.get('cracha', '').strip()
+    if not cracha_informado:
+        return Response({"status": "erro", "mensagem": "Informe o cachá para autorizar."}, status=400)
+
+    try:
+        supervisor = Usuario.objects.get(
+            cracha=cracha_informado,
+            perfil__in=['SUPERVISOR', 'ADM'],
+            ativo=True
+        )
+    except Usuario.DoesNotExist:
+        return Response({"status": "erro", "mensagem": "Cachá inválido ou sem permissão."}, status=403)
+
+    excecao.status = 'AUTORIZADO'
+    excecao.supervisor_resp = supervisor
+    excecao.data_resolucao = timezone.now()
+    excecao.justificativa_supervisor = request.data.get('justificativa', 'Autorizado via Master Code')
+    excecao.save()
+
+    return Response({
+        "status": "sucesso",
+        "mensagem": f"Exceção autorizada por {supervisor.nome}.",
+        "autorizado_por": supervisor.nome,
+    })
+
+
+@csrf_exempt
+@api_view(['POST'])
+def api_negar_excecao(request, pk):
+    """Nega uma exceção de picking com motivo do supervisor."""
+    if not _check_api_permission(request, ['ADM', 'SUPERVISOR']):
+        return Response({"status": "erro", "mensagem": "Acesso negado."}, status=403)
+
+    try:
+        excecao = ExcecaoPicking.objects.select_related('sessao', 'item').get(pk=pk)
+    except ExcecaoPicking.DoesNotExist:
+        return Response({"status": "erro", "mensagem": "Exceção não encontrada."}, status=404)
+
+    if excecao.status != 'PENDENTE':
+        return Response({"status": "erro", "mensagem": "Esta exceção já foi tratada."}, status=400)
+
+    cracha_informado = request.data.get('cracha', '').strip()
+    motivo_negacao = request.data.get('motivo', '').strip()
+
+    if not motivo_negacao:
+        return Response({"status": "erro", "mensagem": "Informe o motivo da negação."}, status=400)
+
+    supervisor = None
+    if cracha_informado:
+        supervisor = Usuario.objects.filter(
+            cracha=cracha_informado,
+            perfil__in=['SUPERVISOR', 'ADM'],
+            ativo=True
+        ).first()
+
+    if not supervisor:
+        usuario_id = request.session.get('usuario_id')
+        if usuario_id:
+            supervisor = Usuario.objects.filter(id=usuario_id).first()
+
+    excecao.status = 'NEGADO'
+    excecao.supervisor_resp = supervisor
+    excecao.data_resolucao = timezone.now()
+    excecao.justificativa_supervisor = motivo_negacao
+    excecao.save()
+
+    return Response({
+        "status": "sucesso",
+        "mensagem": f"Exceção negada. Motivo: {motivo_negacao}.",
     })
 
 
@@ -352,14 +525,21 @@ def api_kpis_tempo_real(request):
     total_pecas = sessoes.aggregate(s=Sum('pecas_bipadas'))['s'] or 0
     total_erros = sessoes.aggregate(s=Sum('erros'))['s'] or 0
 
-    # PPH global
+    # PPH global e Tempo Total
     pph_global = 0
+    total_horas = 0
+    tempo_total_str = "0:00"
     if sessoes.exists():
-        total_horas = sum(
-            max(((s.fim or timezone.now()) - s.inicio).total_seconds(), 1) / 3600
+        total_segundos = sum(
+            max(((s.fim or timezone.now()) - s.inicio).total_seconds(), 1)
             for s in sessoes
         )
+        total_horas = total_segundos / 3600
         pph_global = int(total_pecas / max(total_horas, 0.001))
+        
+        h = int(total_segundos // 3600)
+        m = int((total_segundos % 3600) // 60)
+        tempo_total_str = f"{h}:{m:02d}"
 
     taxa_acerto = max(0, round(100 - (total_erros * 1.5), 1))
 
@@ -433,8 +613,36 @@ def api_kpis_tempo_real(request):
             
     ranking.sort(key=lambda x: x['pph'], reverse=True)
 
-    # PPH por turno (simulado com base nos horários)
-    pph_turnos = {"manha": 0, "tarde": 0, "noite": 0, "atual": pph_global}
+    # PPH por turno (com base nos horários reais de início das sessões)
+    sessoes_manha = []
+    sessoes_tarde = []
+    sessoes_noite = []
+    for s in sessoes:
+        dt_local = timezone.localtime(s.inicio)
+        hour = dt_local.hour
+        if 6 <= hour < 14:
+            sessoes_manha.append(s)
+        elif 14 <= hour < 22:
+            sessoes_tarde.append(s)
+        else:
+            sessoes_noite.append(s)
+
+    def _calc_pph_sessoes(lista_sessoes):
+        if not lista_sessoes:
+            return 0
+        total_p = sum(s.pecas_bipadas for s in lista_sessoes)
+        total_h = sum(
+            max(((s.fim or timezone.now()) - s.inicio).total_seconds(), 1) / 3600
+            for s in lista_sessoes
+        )
+        return int(total_p / max(total_h, 0.001))
+
+    pph_turnos = {
+        "manha": _calc_pph_sessoes(sessoes_manha),
+        "tarde": _calc_pph_sessoes(sessoes_tarde),
+        "noite": _calc_pph_sessoes(sessoes_noite),
+        "atual": pph_global
+    }
 
     return Response({
         "pph_global": pph_global,
@@ -443,6 +651,7 @@ def api_kpis_tempo_real(request):
         "total_erros": total_erros,
         "taxa_acerto": taxa_acerto,
         "tempo_medio": tempo_medio_min,
+        "tempo_total": tempo_total_str,
         "streak": streak,
         "operadores_ativos": operadores_ativos,
         "ranking": ranking[:10],
@@ -538,76 +747,151 @@ def api_webhook_testar(request, pk):
 
 
 # ═══════════════════════════════════════════════════════════════
-#  KPI DEFINITIONS — CRUD
+#  KPI DEFINITIONS — CRUD COMPLETO (com permissão, emoji-safe, favorito)
 # ═══════════════════════════════════════════════════════════════
+
+import re as _re
 
 @csrf_exempt
 @api_view(['GET', 'POST'])
 def api_kpis_config(request):
+    """Lista todos os KPIs (GET) ou cria um novo (POST)."""
     if not _check_api_permission(request, ['ADM']):
         return Response({"status": "erro", "mensagem": "Acesso negado. Apenas ADM."}, status=403)
 
     if request.method == 'GET':
-        kpis = KPIDefinicao.objects.all().order_by('nome')
+        kpis = KPIDefinicao.objects.all().order_by('-favorito', 'nome')
         data = [{
-            "id": k.id, "nome": k.nome, "icone": k.icone,
-            "formula": k.formula, "meta": k.meta,
-            "tom_cor": k.tom_cor, "ativo": k.ativo,
+            'id': k.id, 'nome': k.nome, 'icone': k.icone,
+            'formula': k.formula, 'meta': k.meta,
+            'tom_cor': k.tom_cor, 'ativo': k.ativo,
+            'favorito': k.favorito,
+            'supervisor_resp': k.supervisor_resp_id,
+            'criado_em': k.criado_em.strftime('%d/%m/%Y %H:%M') if k.criado_em else '',
         } for k in kpis]
-        return Response({"kpis": data, "total": len(data)})
+        return Response({'status': 'sucesso', 'kpis': data, 'total': len(data)})
 
+    # POST — criar
     nome = request.data.get('nome', '').strip()
     if not nome:
-        return Response({"status": "erro", "mensagem": "Nome obrigatório."}, status=400)
+        return Response({'status': 'erro', 'mensagem': 'Nome é obrigatório.'}, status=400)
 
     icone_raw = request.data.get('icone', '📊')
-    import re
-    # Remove caracteres de 4 bytes (emojis) que quebram o MySQL utf8
-    icone_seguro = re.sub(r'[^\x00-\xFFFF]', '', icone_raw)
-    if not icone_seguro:
-        icone_seguro = 'K' # Fallback se a pessoa digitou só um emoji
+    # Sanitiza emojis de 4 bytes (incompatíveis com MySQL utf8)
+    icone_seguro = _re.sub(r'[^\x00-\xFFFF]', '', icone_raw).strip() or 'K'
+
+    supervisor_id = request.data.get('supervisor_resp')
+    supervisor = None
+    if supervisor_id:
+        try:
+            supervisor = Usuario.objects.get(id=supervisor_id)
+        except Usuario.DoesNotExist:
+            pass
 
     try:
-        k = KPIDefinicao.objects.create(
+        kpi = KPIDefinicao.objects.create(
             nome=nome,
             icone=icone_seguro,
             formula=request.data.get('formula', ''),
             meta=request.data.get('meta', ''),
             tom_cor=request.data.get('tom_cor', 'GREEN'),
-            supervisor_resp_id=request.data.get('supervisor_resp') or None,
+            supervisor_resp=supervisor,
         )
-        return Response({"status": "sucesso", "id": k.id, "mensagem": f"KPI '{nome}' criado."})
+        return Response({'status': 'sucesso', 'id': kpi.id, 'mensagem': f"KPI '{nome}' criado com sucesso."}, status=201)
     except Exception as e:
-        error_str = str(e)
-        if "Incorrect string value" in error_str:
-            return Response({"status": "erro", "mensagem": "O banco não suporta esse caractere no Ícone. Use texto normal."}, status=400)
-        return Response({"status": "erro", "mensagem": f"Erro interno: {error_str}"}, status=500)
+        err = str(e)
+        if 'Incorrect string value' in err:
+            return Response({'status': 'erro', 'mensagem': 'Banco não suporta esse ícone. Use texto simples.'}, status=400)
+        return Response({'status': 'erro', 'mensagem': f'Erro interno: {err}'}, status=500)
 
 
 @csrf_exempt
-@api_view(['PUT', 'PATCH', 'DELETE'])
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
 def api_kpi_detalhe(request, pk):
+    """Detalhe, edição ou exclusão de um KPI."""
     if not _check_api_permission(request, ['ADM']):
-        return Response({"status": "erro", "mensagem": "Acesso negado. Apenas ADM."}, status=403)
+        return Response({'status': 'erro', 'mensagem': 'Acesso negado. Apenas ADM.'}, status=403)
 
     try:
-        k = KPIDefinicao.objects.get(pk=pk)
+        kpi = KPIDefinicao.objects.get(pk=pk)
     except KPIDefinicao.DoesNotExist:
-        return Response({"status": "erro", "mensagem": "KPI não encontrado."}, status=404)
+        return Response({'status': 'erro', 'mensagem': 'KPI não encontrado.'}, status=404)
+
+    if request.method == 'GET':
+        return Response({
+            'id': kpi.id, 'nome': kpi.nome, 'icone': kpi.icone,
+            'formula': kpi.formula, 'meta': kpi.meta,
+            'tom_cor': kpi.tom_cor, 'favorito': kpi.favorito,
+            'ativo': kpi.ativo, 'supervisor_resp': kpi.supervisor_resp_id,
+        })
 
     if request.method == 'DELETE':
-        k.delete()
-        return Response({"status": "sucesso", "mensagem": "KPI removido."})
+        kpi.delete()
+        return Response({'status': 'sucesso', 'mensagem': 'KPI removido.'})
 
-    k.nome = request.data.get('nome', k.nome)
-    k.icone = request.data.get('icone', k.icone)
-    k.formula = request.data.get('formula', k.formula)
-    k.meta = request.data.get('meta', k.meta)
-    k.tom_cor = request.data.get('tom_cor', k.tom_cor)
-    k.supervisor_resp_id = request.data.get('supervisor_resp') or k.supervisor_resp_id
-    k.ativo = request.data.get('ativo', k.ativo)
-    k.save()
-    return Response({"status": "sucesso", "mensagem": "KPI atualizado."})
+    # PUT/PATCH — atualizar
+    kpi.nome    = request.data.get('nome', kpi.nome).strip()
+    kpi.icone   = request.data.get('icone', kpi.icone)
+    kpi.formula = request.data.get('formula', kpi.formula)
+    kpi.meta    = request.data.get('meta', kpi.meta)
+    kpi.tom_cor = request.data.get('tom_cor', kpi.tom_cor)
+    kpi.ativo   = request.data.get('ativo', kpi.ativo)
+
+    sup_id = request.data.get('supervisor_resp')
+    if sup_id is not None:
+        kpi.supervisor_resp = Usuario.objects.filter(id=sup_id).first() if sup_id else None
+
+    kpi.save()
+    return Response({'status': 'sucesso', 'mensagem': 'KPI atualizado.'})
+
+
+@api_view(['POST'])
+def api_kpi_favorito(request, pk):
+    """Alterna o favorito de um KPI."""
+    if not _check_api_permission(request, ['ADM']):
+        return Response({'status': 'erro', 'mensagem': 'Acesso negado. Apenas ADM.'}, status=403)
+    try:
+        kpi = KPIDefinicao.objects.get(pk=pk)
+    except KPIDefinicao.DoesNotExist:
+        return Response({'status': 'erro', 'mensagem': 'KPI não encontrado.'}, status=404)
+    kpi.favorito = not kpi.favorito
+    kpi.save()
+    return Response({'status': 'sucesso', 'favorito': kpi.favorito})
+
+
+# ═══════════════════════════════════════════════════════════════
+#  META GLOBAL — singleton com metas de produção
+# ═══════════════════════════════════════════════════════════════
+
+@api_view(['GET', 'POST'])
+def api_meta_global(request):
+    """Retorna (GET) ou salva (POST) as metas globais de produção."""
+    # GET is permitido para ADM e SUPERVISOR para exibir no dashboard
+    if request.method == 'POST' and not _check_api_permission(request, ['ADM']):
+        return Response({'status': 'erro', 'mensagem': 'Acesso negado. Apenas ADM pode alterar metas.'}, status=403)
+
+    meta, _ = MetaGlobal.objects.get_or_create(id=1)
+
+    if request.method == 'GET':
+        return Response({
+            'status': 'sucesso',
+            'meta_pph':      meta.meta_pph,
+            'meta_caixas':   meta.meta_caixas,
+            'meta_acuracia': meta.meta_acuracia,
+            'meta_streak':   meta.meta_streak,
+        })
+
+    # POST — salvar
+    try:
+        meta.meta_pph      = int(request.data.get('meta_pph',      meta.meta_pph))
+        meta.meta_caixas   = int(request.data.get('meta_caixas',   meta.meta_caixas))
+        meta.meta_acuracia = int(request.data.get('meta_acuracia', meta.meta_acuracia))
+        meta.meta_streak   = int(request.data.get('meta_streak',   meta.meta_streak))
+        meta.save()
+    except (ValueError, TypeError):
+        return Response({'status': 'erro', 'mensagem': 'Valores inválidos.'}, status=400)
+
+    return Response({'status': 'sucesso', 'mensagem': 'Metas globais atualizadas com sucesso.'})
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -973,24 +1257,30 @@ def api_heartbeat_status(request):
         return Response({"status": "erro", "mensagem": "Acesso negado."}, status=403)
 
     agora = timezone.now()
-    timeout_limite = agora - timedelta(minutes=5)
+    timeout_limite = agora - timedelta(minutes=1)
+    offline_limite = agora - timedelta(minutes=5)
 
     coletores = HeartbeatLog.objects.all().select_related('usuario').order_by('-ultimo_sinal')
     data = []
     for c in coletores:
-        # Atualiza status se ficou mais de 5min sem sinal
-        if c.ultimo_sinal < timeout_limite and c.status == 'ONLINE':
-            c.status = 'TIMEOUT'
-            c.save(update_fields=['status'])
+        # Atualiza status baseado no tempo de inatividade
+        if c.ultimo_sinal < offline_limite:
+            if c.status != 'OFFLINE':
+                c.status = 'OFFLINE'
+                c.save(update_fields=['status'])
 
-            # Dispara webhooks de DEVICE_OFFLINE
-            for wh in WebhookConfig.objects.filter(evento_gatilho='DEVICE_OFFLINE', ativo=True):
-                _disparar_webhook_async(wh, {
-                    "event": "DEVICE_OFFLINE",
-                    "dispositivo": c.dispositivo_id,
-                    "usuario": c.usuario.nome if c.usuario else "Desconhecido",
-                    "ultimo_sinal": c.ultimo_sinal.isoformat(),
-                })
+                # Dispara webhooks de DEVICE_OFFLINE
+                for wh in WebhookConfig.objects.filter(evento_gatilho='DEVICE_OFFLINE', ativo=True):
+                    _disparar_webhook_async(wh, {
+                        "event": "DEVICE_OFFLINE",
+                        "dispositivo": c.dispositivo_id,
+                        "usuario": c.usuario.nome if c.usuario else "Desconhecido",
+                        "ultimo_sinal": c.ultimo_sinal.isoformat(),
+                    })
+        elif c.ultimo_sinal < timeout_limite:
+            if c.status != 'TIMEOUT':
+                c.status = 'TIMEOUT'
+                c.save(update_fields=['status'])
 
         from django.utils.timezone import localtime
         local_sinal = localtime(c.ultimo_sinal) if c.ultimo_sinal else agora

@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MES PICKING — Gateway Platform</title>
     <link rel="icon" href="{% static 'img/KYLY_logo.png' %}">
+    <!-- Biblioteca de leitura QR/Barcode — câmera apenas -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Arial,sans-serif;}
         body{background:#0a0f1a;color:#fff;min-height:100vh;}
@@ -23,24 +25,53 @@
         .dsk-main{flex:1;display:flex;align-items:center;justify-content:center;gap:40px;padding:40px;flex-wrap:wrap;}
 
         /* LOGIN CARD */
-        .login-card{background:rgba(15,23,42,.95);border:1px solid rgba(212,175,17,.3);border-radius:20px;padding:40px;width:400px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+        .login-card{background:rgba(15,23,42,.95);border:1px solid rgba(212,175,17,.3);border-radius:20px;padding:40px;width:420px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
         .login-card h2{color:#d4af11;font-size:1.4rem;margin-bottom:6px;}
-        .login-card p{color:#8892b0;font-size:.9rem;margin-bottom:28px;}
+        .login-card > p{color:#8892b0;font-size:.9rem;margin-bottom:24px;}
 
-        .cracha-input-wrap{position:relative;margin-bottom:20px;}
-        .cracha-input{width:100%;padding:18px 20px 18px 52px;background:rgba(26,42,74,.8);border:2px solid rgba(212,175,17,.4);border-radius:12px;color:#fff;font-size:1.1rem;outline:none;transition:border .3s;}
-        .cracha-input:focus{border-color:#d4af11;}
-        .cracha-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:1.3rem;color:#d4af11;}
+        /* Campos de input */
+        .field-group{margin-bottom:16px;}
+        .field-label{display:block;font-size:11px;color:#8892b0;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+        .field-wrap{position:relative;}
+        .field-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:1.2rem;color:#d4af11;}
+        .field-input{width:100%;padding:16px 16px 16px 50px;background:rgba(26,42,74,.8);border:2px solid rgba(212,175,17,.3);border-radius:12px;color:#fff;font-size:1rem;outline:none;transition:border .3s;}
+        .field-input:focus{border-color:#d4af11;box-shadow:0 0 0 3px rgba(212,175,17,.1);}
+        .field-input::placeholder{color:#4a5568;}
 
-        .btn-entrar{width:100%;padding:16px;background:linear-gradient(135deg,#d4af11,#b8940f);color:#003366;font-size:1rem;font-weight:700;border:none;border-radius:12px;cursor:pointer;transition:all .3s;letter-spacing:1px;}
+        /* Campo senha — oculto até digitar crachá */
+        .senha-wrap{max-height:0;overflow:hidden;transition:max-height .35s ease, opacity .3s ease;opacity:0;}
+        .senha-wrap.visivel{max-height:120px;opacity:1;}
+
+        /* Botão entrar */
+        .btn-entrar{width:100%;padding:16px;background:linear-gradient(135deg,#d4af11,#b8940f);color:#003366;font-size:1rem;font-weight:700;border:none;border-radius:12px;cursor:pointer;transition:all .3s;letter-spacing:1px;margin-top:4px;}
         .btn-entrar:hover{transform:scale(1.02);box-shadow:0 8px 25px rgba(212,175,17,.4);}
-        .btn-entrar:active{transform:scale(.98);}
+        .btn-entrar:disabled{opacity:.6;cursor:not-allowed;transform:none;}
 
-        .login-feedback{margin-top:16px;padding:12px 16px;border-radius:10px;font-size:.9rem;display:none;text-align:center;}
+        /* Botão câmera */
+        .btn-camera-gateway{
+            width:100%;padding:13px;background:rgba(0,51,102,0.8);color:#d4af11;
+            border:2px solid #d4af11;border-radius:12px;cursor:pointer;
+            font-size:.92rem;font-weight:700;letter-spacing:.5px;
+            display:flex;align-items:center;justify-content:center;gap:8px;
+            transition:all .3s;margin-top:12px;
+        }
+        .btn-camera-gateway:hover{background:rgba(0,51,102,1);box-shadow:0 4px 20px rgba(212,175,17,.3);}
+
+        /* Área do scanner inline */
+        .camera-reader-wrap{display:none;background:#000;border-radius:12px;overflow:hidden;margin-top:12px;border:2px solid rgba(212,175,17,.4);}
+        #gw-reader{width:100%;min-height:220px;}
+        .gw-cam-close{display:none;width:100%;padding:10px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:8px;cursor:pointer;font-weight:600;font-size:.9rem;margin-top:8px;}
+
+        /* Feedback */
+        .login-feedback{margin-top:16px;padding:12px 16px;border-radius:10px;font-size:.9rem;display:none;text-align:center;font-weight:bold;}
         .login-feedback.success{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;}
-        .login-feedback.error{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#ef4444;}
+        .login-feedback.error{background:#dc2626;border:1px solid #ef4444;color:#ffffff;}
 
-        /* MENU DE OPÇÕES PÓS-LOGIN */
+        /* Divisor "ou use a câmera" */
+        .divider{display:flex;align-items:center;gap:10px;margin:16px 0 0;color:#4a5568;font-size:.8rem;}
+        .divider::before,.divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08);}
+
+        /* Opções pós-login */
         .opcoes-wrap{display:none;margin-top:24px;flex-direction:column;gap:10px;}
         .opcao-btn{display:flex;align-items:center;gap:12px;padding:14px 18px;background:rgba(26,42,74,.6);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:#fff;text-decoration:none;font-size:.95rem;font-weight:500;transition:all .25s;}
         .opcao-btn:hover{background:rgba(212,175,17,.12);border-color:rgba(212,175,17,.4);color:#d4af11;transform:translateX(4px);}
@@ -96,34 +127,59 @@
             <!-- Card de Login -->
             <div class="login-card">
                 <h2>🔑 Acesso ao Sistema</h2>
-                <p>Escaneie seu crachá, digite manualmente ou use a câmera para entrar.</p>
+                <p>Escaneie seu crachá com a câmera ou digite o crachá + senha.</p>
 
-                <div class="cracha-input-wrap">
-                    <span class="cracha-icon">🪪</span>
-                    <input
-                        type="text"
-                        id="inputCracha"
-                        class="cracha-input"
-                        placeholder="Bipie ou digite o crachá..."
-                        autocomplete="off"
-                        autofocus
-                    >
+                <!-- Campo Crachá -->
+                <div class="field-group">
+                    <label class="field-label" for="inputCracha">Crachá</label>
+                    <div class="field-wrap">
+                        <span class="field-icon">🪪</span>
+                        <input
+                            type="text"
+                            id="inputCracha"
+                            class="field-input"
+                            placeholder="Digite seu crachá..."
+                            autocomplete="off"
+                            autofocus
+                        >
+                    </div>
                 </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn-entrar" id="btnEntrar" onclick="fazerLogin()" style="flex: 1;">
-                        → Entrar
-                    </button>
-                    <button id="btnCamera" style="background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: #fff; padding: 0 20px; border-radius: 12px; cursor: pointer; transition: 0.3s;" title="Ler com a câmera">
-                        📷
-                    </button>
+                <!-- Campo Senha — aparece ao digitar crachá manualmente -->
+                <div class="senha-wrap" id="senhaWrap">
+                    <div class="field-group" style="margin-bottom:0;">
+                        <label class="field-label" for="inputSenha">Senha</label>
+                        <div class="field-wrap">
+                            <span class="field-icon">🔒</span>
+                            <input
+                                type="password"
+                                id="inputSenha"
+                                class="field-input"
+                                placeholder="Digite sua senha..."
+                                autocomplete="current-password"
+                            >
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Container do Scanner -->
-                <div id="reader-container" style="display: none; margin-top: 20px; background: #000; border-radius: 10px; overflow: hidden; border: 1px solid rgba(212,175,17,.4);">
-                    <div id="reader" style="width: 100%;"></div>
-                    <button id="btnFecharCamera" style="width: 100%; padding: 10px; background: #ef4444; color: white; border: none; cursor: pointer; font-weight: bold;">Cancelar Câmera</button>
+                <!-- Botão Entrar (login manual) -->
+                <button class="btn-entrar" id="btnEntrar" onclick="fazerLogin(false)">
+                    → Entrar
+                </button>
+
+                <div class="divider">ou use a câmera</div>
+
+                <!-- Botão câmera -->
+                <button class="btn-camera-gateway" id="btnCameraGw" onclick="toggleCameraGateway()">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    📷 Ler com Câmera
+                </button>
+
+                <!-- Área do scanner inline (câmera apenas, sem importar imagem) -->
+                <div class="camera-reader-wrap" id="gwCameraWrap">
+                    <div id="gw-reader"></div>
                 </div>
+                <button class="gw-cam-close" id="btnFecharCamGw" onclick="fecharCameraGateway()">&#x2715; Fechar Câmera</button>
 
                 <div class="login-feedback" id="feedbackLogin"></div>
 
@@ -161,43 +217,120 @@
         <h1>MES PICKING</h1>
         <p>Motor Industrial de Separação</p>
         <a href="{% url 'login_supervisor' %}" class="mobile-btn">🔑 Iniciar Coletor (Requer Supervisor)</a>
-        <a href="#" onclick="document.querySelector('.cracha-input').focus(); document.querySelector('.mobile-view').style.display='none'; document.querySelector('.desktop-view').style.display='flex';" class="mobile-btn-sec">👷 Acesso Dashboard</a>
+        <a href="#" onclick="document.querySelector('.mobile-view').style.display='none'; document.querySelector('.desktop-view').style.display='flex';" class="mobile-btn-sec">👷 Acesso Dashboard</a>
     </div>
 
     <script>
+        /* ═══════════════════════════════════════════════════
+           CÂMERA — Câmera apenas, SEM opção importar imagem
+        ═══════════════════════════════════════════════════ */
+        let html5Scanner = null;
+        let cameraAtiva = false;
+
+        function toggleCameraGateway() {
+            cameraAtiva ? fecharCameraGateway() : abrirCameraGateway();
+        }
+
+        function abrirCameraGateway() {
+            document.getElementById('gwCameraWrap').style.display = 'block';
+            document.getElementById('btnFecharCamGw').style.display = 'block';
+            document.getElementById('btnCameraGw').innerHTML =
+                '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Fechar Câmera';
+            cameraAtiva = true;
+
+            if (typeof Html5Qrcode === 'undefined') {
+                mostrarFeedback('⚠️ Biblioteca de câmera não carregada.', 'error');
+                return;
+            }
+
+            // Usar Html5Qrcode (não Html5QrcodeScanner) para ter controle total
+            // e não mostrar botão de importar imagem
+            html5Scanner = new Html5Qrcode('gw-reader');
+            const config = { fps: 12, qrbox: { width: 240, height: 180 } };
+
+            html5Scanner.start(
+                { facingMode: 'environment' },
+                config,
+                (decoded) => {
+                    // Leitura bem-sucedida → login automático, sem senha
+                    inputCracha.value = decoded;
+                    fecharCameraGateway();
+                    fazerLogin(true); // via_camera = true
+                },
+                () => { /* ignora frames sem leitura */ }
+            ).catch(err => {
+                mostrarFeedback('❌ Erro ao acessar câmera. Verifique permissões.', 'error');
+                fecharCameraGateway();
+            });
+        }
+
+        function fecharCameraGateway() {
+            if (html5Scanner) {
+                html5Scanner.stop().catch(() => {}).finally(() => { html5Scanner = null; });
+            }
+            document.getElementById('gwCameraWrap').style.display = 'none';
+            document.getElementById('btnFecharCamGw').style.display = 'none';
+            document.getElementById('btnCameraGw').innerHTML =
+                '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> 📷 Ler com Câmera';
+            cameraAtiva = false;
+        }
+
+        /* ═══════════════════════════════════════════════════
+           CAMPO CRACHA — mostra senha ao digitar manualmente
+        ═══════════════════════════════════════════════════ */
         const inputCracha = document.getElementById('inputCracha');
-        const feedback = document.getElementById('feedbackLogin');
-        const opcoesWrap = document.getElementById('opcoesWrap');
+        const inputSenha  = document.getElementById('inputSenha');
+        const senhaWrap   = document.getElementById('senhaWrap');
+        const feedback    = document.getElementById('feedbackLogin');
+        const opcoesWrap  = document.getElementById('opcoesWrap');
 
-        // Enter também submete
-        inputCracha.addEventListener('keydown', e => {
-            if (e.key === 'Enter') fazerLogin();
-        });
-
-        // Auto-login quando coletor laser digita rápido (>4 chars em <300ms)
-        let timerBipe = null;
+        // Mostra o campo de senha quando o usuário começa a digitar o crachá manualmente
         inputCracha.addEventListener('input', () => {
-            clearTimeout(timerBipe);
-            timerBipe = setTimeout(() => {
-                const val = inputCracha.value.trim();
-                if (val.length >= 4) fazerLogin();
-            }, 300);
+            const val = inputCracha.value.trim();
+            if (val.length > 0) {
+                senhaWrap.classList.add('visivel');
+            } else {
+                senhaWrap.classList.remove('visivel');
+            }
         });
 
-        async function fazerLogin() {
+        // Enter no crachá → foca na senha
+        inputCracha.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (inputCracha.value.trim()) inputSenha.focus();
+            }
+        });
+
+        // Enter na senha → login
+        inputSenha.addEventListener('keydown', e => {
+            if (e.key === 'Enter') fazerLogin(false);
+        });
+
+        /* ═══════════════════════════════════════════════════
+           LOGIN
+        ═══════════════════════════════════════════════════ */
+        async function fazerLogin(via_camera) {
             const cracha = inputCracha.value.trim();
             if (!cracha) {
                 mostrarFeedback('Digite ou escaneie seu crachá.', 'error');
                 return;
             }
 
-            document.getElementById('btnEntrar').textContent = '⏳ Verificando...';
+            const btnEntrar = document.getElementById('btnEntrar');
+            btnEntrar.disabled = true;
+            btnEntrar.textContent = '⏳ Verificando...';
+
+            const payload = { cracha, via_camera: !!via_camera };
+            if (!via_camera) {
+                payload.senha = inputSenha.value;
+            }
 
             try {
                 const res = await fetch('/auth/api/v1/login-desktop/', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-                    body: JSON.stringify({cracha})
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify(payload)
                 });
                 const data = await res.json();
 
@@ -206,14 +339,15 @@
                     renderOpcoes(data.opcoes, data.redirect);
                 } else {
                     mostrarFeedback(`❌ ${data.mensagem}`, 'error');
-                    inputCracha.value = '';
-                    inputCracha.focus();
+                    inputSenha.value = '';
+                    inputSenha.focus();
                 }
             } catch (err) {
                 mostrarFeedback('❌ Erro de conexão. Tente novamente.', 'error');
             }
 
-            document.getElementById('btnEntrar').textContent = '→ Entrar';
+            btnEntrar.disabled = false;
+            btnEntrar.textContent = '→ Entrar';
         }
 
         function mostrarFeedback(msg, tipo) {
@@ -223,11 +357,26 @@
         }
 
         function renderOpcoes(opcoes, redirectPadrao) {
+            fecharCameraGateway();
+
+            // Ocultar elementos de login
+            document.querySelector('.field-group') && document.querySelectorAll('.field-group').forEach(el => el.style.display = 'none');
+            senhaWrap.style.display = 'none';
+            document.getElementById('btnEntrar').style.display = 'none';
+            document.getElementById('btnCameraGw').style.display = 'none';
+            document.getElementById('gwCameraWrap').style.display = 'none';
+            document.getElementById('btnFecharCamGw').style.display = 'none';
+            const divider = document.querySelector('.divider');
+            if (divider) divider.style.display = 'none';
+            const cardP = document.querySelector('.login-card > p');
+            if (cardP) cardP.style.display = 'none';
+
             if (!opcoes || opcoes.length === 0) {
                 window.location.href = redirectPadrao;
                 return;
             }
-            opcoesWrap.innerHTML = '<p style="color:#8892b0;font-size:.85rem;margin-bottom:8px;">Selecione onde deseja acessar:</p>';
+
+            opcoesWrap.innerHTML = '<p style="color:#8892b0;font-size:.85rem;margin-bottom:10px;">Selecione onde deseja acessar:</p>';
             opcoes.forEach(op => {
                 const a = document.createElement('a');
                 a.href = op.url;
@@ -236,7 +385,6 @@
                 opcoesWrap.appendChild(a);
             });
             opcoesWrap.style.display = 'flex';
-            document.getElementById('btnEntrar').style.display = 'none';
         }
 
         function getCookie(name) {
@@ -246,43 +394,6 @@
                 if (c.startsWith(name + '=')) v = decodeURIComponent(c.slice(name.length + 1));
             });
             return v;
-        }
-    </script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script>
-        // Lógica do Scanner de Câmera
-        let html5QrcodeScanner = null;
-        
-        document.getElementById('btnCamera').addEventListener('click', () => {
-            const container = document.getElementById('reader-container');
-            container.style.display = 'block';
-            
-            if (!html5QrcodeScanner) {
-                html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 100} }, false);
-                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-            }
-        });
-
-        document.getElementById('btnFecharCamera').addEventListener('click', () => {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear().then(() => {
-                    document.getElementById('reader-container').style.display = 'none';
-                    html5QrcodeScanner = null;
-                });
-            } else {
-                document.getElementById('reader-container').style.display = 'none';
-            }
-        });
-
-        function onScanSuccess(decodedText, decodedResult) {
-            // Joga o texto lido pro input e aciona o login
-            inputCracha.value = decodedText;
-            document.getElementById('btnFecharCamera').click(); // fecha a câmera
-            fazerLogin();
-        }
-
-        function onScanFailure(error) {
-            // Ignora erros contínuos enquanto não achar código
         }
     </script>
 </body>

@@ -34,6 +34,13 @@ urlpatterns = [
     path('api/picking/status/', api_views.status_sessao, name='api_status_sessao'),
 
     # -----------------------------------------------------------------
+    # API — Exceções de Picking (Pular SKU / Danificada)
+    # -----------------------------------------------------------------
+    path('api/excecoes/', api_views.api_listar_excecoes, name='api_listar_excecoes'),
+    path('api/excecoes/<int:pk>/autorizar/', api_views.api_autorizar_excecao, name='api_autorizar_excecao'),
+    path('api/excecoes/<int:pk>/negar/', api_views.api_negar_excecao, name='api_negar_excecao'),
+
+    # -----------------------------------------------------------------
     # API — Dashboard KPIs (tempo real)
     # -----------------------------------------------------------------
     path('api/kpis/dados/', api_views.api_kpis_tempo_real, name='api_kpis_dados'),
@@ -50,6 +57,8 @@ urlpatterns = [
     # -----------------------------------------------------------------
     path('api/kpis-config/', api_views.api_kpis_config, name='api_kpis_config'),
     path('api/kpis-config/<int:pk>/', api_views.api_kpi_detalhe, name='api_kpi_detalhe'),
+    path('api/kpis-config/<int:pk>/favorito/', api_views.api_kpi_favorito, name='api_kpi_favorito'),
+    path('api/metas-globais/', api_views.api_meta_global, name='api_meta_global'),
 
     # -----------------------------------------------------------------
     # API — Funcionários CRUD

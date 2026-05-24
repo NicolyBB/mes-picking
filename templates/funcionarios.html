@@ -30,6 +30,7 @@
     <a href="{% url 'funcionarios' %}" class="nav-item active">Funcionários</a>
     <a href="{% url 'gerir_kpis' %}" class="nav-item">Gerir KPIs</a>
     <a href="{% url 'webhooks' %}" class="nav-item">Webhooks</a>
+    <a href="{% url 'heartbeat_monitor' %}" class="nav-item">Dispositivos</a>
     {% endif %}
 </nav>
 
@@ -85,6 +86,7 @@
                         <td style="padding:14px 15px;">
                             <button class="btn-icon" data-action="editar" data-id="{{ f.id }}" title="Editar">✏️</button>
                             <button class="btn-icon" onclick="abrirHistoricoFuncionario('{{ f.cracha }}', '{{ f.nome|escapejs }}')" title="Histórico">📋</button>
+                            <button class="btn-icon" onclick="abrirModalSenha({{ f.id }}, '{{ f.nome|escapejs }}')" title="Definir Senha" style="color:#d4af11;">🔑</button>
                             <button class="btn-icon" data-action="excluir" data-id="{{ f.id }}" data-nome="{{ f.nome|escapejs }}" title="Excluir" style="color:#ef4444;">🗑️</button>
                         </td>
                     </tr>
@@ -96,6 +98,32 @@
         </div>
     </section>
 </main>
+
+<!-- MODAL DEFINIR SENHA -->
+<div id="modalSenha" style="display:none;position:fixed;inset:0;background:rgba(10,15,26,.85);z-index:1001;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-secondary);border:1px solid var(--border-color);padding:32px;border-radius:16px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+        <h3 id="modalSenhaTitulo" style="margin-bottom:6px;color:var(--text-primary);">🔑 Definir Senha</h3>
+        <p id="modalSenhaDesc" style="color:var(--text-secondary);font-size:13px;margin-bottom:20px;"></p>
+        <input type="hidden" id="senhaFuncId">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+            <div>
+                <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Nova Senha</label>
+                <input id="novaSenha" type="password" placeholder="Mínimo 4 caracteres"
+                    style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;">
+            </div>
+            <div>
+                <label style="color:var(--text-secondary);font-size:12px;display:block;margin-bottom:6px;">Confirmar Senha</label>
+                <input id="confirmarSenha" type="password" placeholder="Repita a senha"
+                    style="width:100%;padding:12px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);outline:none;">
+            </div>
+        </div>
+        <div id="senhaFeedback" style="display:none;margin-top:12px;padding:10px;border-radius:8px;font-size:.9rem;"></div>
+        <div style="display:flex;gap:12px;margin-top:24px;">
+            <button onclick="fecharModalSenha()" style="flex:1;padding:14px;background:var(--bg-tertiary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:10px;cursor:pointer;font-weight:600;">Cancelar</button>
+            <button onclick="salvarSenha()" style="flex:2;padding:14px;background:#d4af11;color:#003366;border:none;border-radius:10px;cursor:pointer;font-weight:700;">✅ Salvar Senha</button>
+        </div>
+    </div>
+</div>
 
 <!-- MODAL CADASTRO / EDIÇÃO -->
 <div id="modalFuncionario" style="display:none;position:fixed;inset:0;background:rgba(10,15,26,.85);z-index:1000;align-items:center;justify-content:center;">
@@ -514,6 +542,66 @@
         document.querySelectorAll('#historicoGeralBody .hist-geral-row').forEach(row => {
             row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
         });
+    }
+
+    /* ── MODAL DEFINIR SENHA ──────────────────────────────── */
+    function abrirModalSenha(id, nome) {
+        document.getElementById('senhaFuncId').value = id;
+        document.getElementById('modalSenhaDesc').textContent = `Definir senha de acesso para: ${nome}`;
+        document.getElementById('novaSenha').value = '';
+        document.getElementById('confirmarSenha').value = '';
+        document.getElementById('senhaFeedback').style.display = 'none';
+        document.getElementById('modalSenha').style.display = 'flex';
+        setTimeout(() => document.getElementById('novaSenha').focus(), 100);
+    }
+
+    function fecharModalSenha() {
+        document.getElementById('modalSenha').style.display = 'none';
+    }
+
+    async function salvarSenha() {
+        const id = document.getElementById('senhaFuncId').value;
+        const nova = document.getElementById('novaSenha').value;
+        const confirmar = document.getElementById('confirmarSenha').value;
+        const fb = document.getElementById('senhaFeedback');
+
+        if (nova.length < 4) {
+            fb.textContent = 'A senha deve ter ao menos 4 caracteres.';
+            fb.style.display = 'block';
+            fb.style.background = 'rgba(239,68,68,.15)';
+            fb.style.color = '#ef4444';
+            fb.style.border = '1px solid rgba(239,68,68,.4)';
+            return;
+        }
+        if (nova !== confirmar) {
+            fb.textContent = 'As senhas não coincidem.';
+            fb.style.display = 'block';
+            fb.style.background = 'rgba(239,68,68,.15)';
+            fb.style.color = '#ef4444';
+            fb.style.border = '1px solid rgba(239,68,68,.4)';
+            return;
+        }
+        try {
+            const res = await fetch('/auth/api/v1/set-senha/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                body: JSON.stringify({ usuario_id: id, senha: nova })
+            });
+            const d = await res.json();
+            if (d.status === 'sucesso') {
+                fecharModalSenha();
+                alert('✅ Senha definida com sucesso!');
+            } else {
+                fb.textContent = d.mensagem || 'Erro ao salvar.';
+                fb.style.display = 'block';
+                fb.style.background = 'rgba(239,68,68,.15)';
+                fb.style.color = '#ef4444';
+                fb.style.border = '1px solid rgba(239,68,68,.4)';
+            }
+        } catch(e) {
+            fb.textContent = 'Erro de conexão.';
+            fb.style.display = 'block';
+        }
     }
 </script>
 </body>

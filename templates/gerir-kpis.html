@@ -30,6 +30,7 @@
         <a href="{% url 'funcionarios' %}" class="nav-item">Funcionários</a>
         <a href="{% url 'gerir_kpis' %}" class="nav-item active">Gerir KPIs</a>
         <a href="{% url 'webhooks' %}" class="nav-item">Webhooks</a>
+        <a href="{% url 'heartbeat_monitor' %}" class="nav-item">Dispositivos</a>
         {% endif %}
     </nav>
 
@@ -73,7 +74,8 @@
                         style="flex:1;padding:8px;background:rgba(255,255,255,.06);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);cursor:pointer;font-size:.85rem;">
                         ✏️ Editar
                     </button>
-                    <button class="btn-icon" onclick="darFocoKpi('{{ kpi.id }}')" title="Dar Foco" style="padding:8px 12px;background:rgba(212,175,17,.1);border:1px solid rgba(212,175,17,.3);border-radius:8px;color:#d4af11;cursor:pointer;">
+                    <button class="btn-icon" onclick="toggleFavorito({{ kpi.id }}, this)" title="Favoritar" id="fav-{{ kpi.id }}"
+                        style="padding:8px 12px;background:{% if kpi.favorito %}rgba(212,175,17,.25){% else %}rgba(255,255,255,.04){% endif %};border:1px solid {% if kpi.favorito %}rgba(212,175,17,.6){% else %}rgba(255,255,255,.08){% endif %};border-radius:8px;color:{% if kpi.favorito %}#d4af11{% else %}var(--text-secondary){% endif %};cursor:pointer;transition:all .25s;">
                         ⭐
                     </button>
                     <button class="btn-icon" data-action="excluir-kpi" data-id="{{ kpi.id }}" data-nome="{{ kpi.nome|escapejs }}"
@@ -96,22 +98,22 @@
         <div class="kpi-config-grid">
             <div class="kpi-config-item">
                 <label>Meta PPH</label>
-                <input type="number" value="130" class="kpi-input" id="metaPPH">
+                <input type="number" class="kpi-input" id="metaPPH" placeholder="130">
                 <span class="kpi-unit">peças/hora</span>
             </div>
             <div class="kpi-config-item">
-                <label>Lead Time Meta</label>
-                <input type="text" value="12:00" class="kpi-input" id="metaLeadTime">
-                <span class="kpi-unit">min/caixa</span>
+                <label>Meta Caixas/Dia</label>
+                <input type="number" class="kpi-input" id="metaCaixas" placeholder="300">
+                <span class="kpi-unit">caixas/dia</span>
             </div>
             <div class="kpi-config-item">
                 <label>Streak Mínimo</label>
-                <input type="number" value="10" class="kpi-input" id="metaStreak">
+                <input type="number" class="kpi-input" id="metaStreak" placeholder="10">
                 <span class="kpi-unit">caixas s/ erro</span>
             </div>
             <div class="kpi-config-item">
                 <label>Acurácia Mínima</label>
-                <input type="number" value="99" class="kpi-input" id="metaAcuracia">
+                <input type="number" class="kpi-input" id="metaAcuracia" placeholder="99">
                 <span class="kpi-unit">% de acerto</span>
             </div>
         </div>
@@ -270,30 +272,65 @@
         el.style.border = `1px solid ${tipo==='error'?'rgba(239,68,68,.4)':'rgba(16,185,129,.4)'}`;
     }
 
-    function salvarMetas() {
+    async function salvarMetas() {
         const el = document.getElementById('metasFeedback');
-        el.style.display = 'inline';
-        setTimeout(() => el.style.display = 'none', 3000);
-    }
-
-    function darFocoKpi(id) {
-        // Remove destaque de outros
-        document.querySelectorAll('.kpi-card').forEach(el => {
-            el.style.border = '1px solid var(--border-color)';
-            el.style.transform = 'scale(1)';
-            el.style.boxShadow = 'none';
-        });
-
-        // Adiciona destaque ao selecionado
-        const card = document.getElementById(`kpi-${id}`);
-        if (card) {
-            card.style.border = '2px solid #d4af11';
-            card.style.transform = 'scale(1.05)';
-            card.style.boxShadow = '0 0 20px rgba(212, 175, 17, 0.4)';
-            card.style.transition = 'all 0.3s ease';
-            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const payload = {
+            meta_pph:      parseInt(document.getElementById('metaPPH').value) || 130,
+            meta_caixas:   parseInt(document.getElementById('metaCaixas').value) || 300,
+            meta_streak:   parseInt(document.getElementById('metaStreak').value) || 10,
+            meta_acuracia: parseInt(document.getElementById('metaAcuracia').value) || 99,
+        };
+        try {
+            const res = await fetch('/api/metas-globais/', {
+                method: 'POST',
+                headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+                body: JSON.stringify(payload)
+            });
+            const d = await res.json();
+            el.textContent = d.status === 'sucesso' ? '✅ Metas salvas!' : '❌ ' + d.mensagem;
+            el.style.color = d.status === 'sucesso' ? '#10b981' : '#ef4444';
+        } catch(e) {
+            el.textContent = '❌ Erro de conexão.';
+            el.style.color = '#ef4444';
         }
+        el.style.display = 'inline';
+        setTimeout(() => el.style.display = 'none', 4000);
     }
+
+    async function toggleFavorito(id, btn) {
+        try {
+            const res = await fetch(`/api/kpis-config/${id}/favorito/`, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+                body: JSON.stringify({})
+            });
+            const d = await res.json();
+            if (d.status === 'sucesso') {
+                const isFav = d.favorito;
+                btn.style.background = isFav ? 'rgba(212,175,17,.25)' : 'rgba(255,255,255,.04)';
+                btn.style.border     = isFav ? '1px solid rgba(212,175,17,.6)' : '1px solid rgba(255,255,255,.08)';
+                btn.style.color      = isFav ? '#d4af11' : 'var(--text-secondary)';
+                btn.title = isFav ? 'Remover dos favoritos' : 'Favoritar';
+                // Reordenar cards: favoritos no topo (reload simples)
+                setTimeout(() => location.reload(), 600);
+            }
+        } catch(e) { console.error('Erro ao favoritar KPI:', e); }
+    }
+
+    // Carregar metas atuais do banco ao abrir a página
+    async function carregarMetas() {
+        try {
+            const res = await fetch('/api/metas-globais/');
+            const d = await res.json();
+            if (d.status === 'sucesso') {
+                document.getElementById('metaPPH').value      = d.meta_pph;
+                document.getElementById('metaCaixas').value   = d.meta_caixas;
+                document.getElementById('metaStreak').value   = d.meta_streak;
+                document.getElementById('metaAcuracia').value = d.meta_acuracia;
+            }
+        } catch(e) { /* usa defaults */ }
+    }
+    carregarMetas();
 </script>
 </body>
 </html>

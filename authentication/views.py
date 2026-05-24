@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import redirect, render
 from .models import Usuario
 from picking_engine.models import HeartbeatLog
+import hashlib
 
 
 @csrf_exempt
@@ -78,57 +79,91 @@ def validar_cracha(request):
 def login_desktop(request):
     """
     Login para estação desktop (>768px).
-    Recebe crachá escaneado/digitado e retorna redirect URL por perfil.
-    O endpoint é chamado via fetch com o CSRF token da página.
+    - via_camera=True  → sem verificação de senha (scan físico já autentica)
+    - via_camera=False → exige crachá + senha definida pelo ADM
     """
     codigo_lido = request.data.get('cracha', '').strip()
+    via_camera   = request.data.get('via_camera', False)
 
     try:
         usuario = Usuario.objects.get(cracha=codigo_lido, ativo=True)
-
-        # Salvar na sessão
-        request.session['usuario_id'] = usuario.id
-        request.session['usuario_nome'] = usuario.nome
-        request.session['perfil_usuario'] = usuario.perfil
-
-        if usuario.perfil == 'COLABORADOR':
-            return Response({
-                "status": "erro",
-                "mensagem": "Operadores devem acessar via Coletor. Solicite ao Supervisor que libere a estação primeiro."
-            }, status=403)
-            
-        elif usuario.perfil == 'SUPERVISOR':
-            redirect_url = '/dashboard/painel-operacoes/'
-        else:  # ADM
-            redirect_url = '/dashboard/'
-
-        # ── Registro Automático de Heartbeat ────────────────────────
-        dispositivo_id = request.data.get('dispositivo_id')
-        if not dispositivo_id:
-            if not request.session.session_key:
-                request.session.create()
-            dispositivo_id = request.session.session_key or f"desktop_{usuario.id}"
-            
-        ip = request.META.get('REMOTE_ADDR', '')
-        HeartbeatLog.objects.update_or_create(
-            dispositivo_id=dispositivo_id,
-            defaults={'usuario': usuario, 'ip_address': ip, 'status': 'ONLINE'}
-        )
-        request.session['dispositivo_id'] = dispositivo_id
-
-        return Response({
-            "status": "sucesso",
-            "nome": usuario.nome,
-            "perfil": usuario.perfil,
-            "redirect": redirect_url,
-            "opcoes": _get_menu_opcoes(usuario.perfil),
-        })
-
     except Usuario.DoesNotExist:
         return Response({
             "status": "erro",
             "mensagem": "Crachá não encontrado ou inativo."
         }, status=404)
+
+    if usuario.perfil == 'COLABORADOR':
+        return Response({
+            "status": "erro",
+            "mensagem": "Operadores devem acessar via Coletor. Solicite ao Supervisor que libere a estação primeiro."
+        }, status=403)
+
+    # —— Verificação de senha (apenas para login manual) —————————————————
+    if not via_camera:
+        senha_enviada = request.data.get('senha', '').strip()
+        if not usuario.senha:
+            return Response({
+                "status": "erro",
+                "mensagem": "Senha não definida. Contate o Administrador."
+            }, status=403)
+        hash_enviado = hashlib.sha256(senha_enviada.encode()).hexdigest()
+        if hash_enviado != usuario.senha:
+            return Response({
+                "status": "erro",
+                "mensagem": "Senha incorreta."
+            }, status=403)
+
+    # —— Rota por perfil —————————————————————————————————
+    if usuario.perfil == 'SUPERVISOR':
+        redirect_url = '/dashboard/painel-operacoes/'
+    else:  # ADM
+        redirect_url = '/dashboard/'
+
+    # Salvar na sessão
+    request.session['usuario_id'] = usuario.id
+    request.session['usuario_nome'] = usuario.nome
+    request.session['perfil_usuario'] = usuario.perfil
+
+    # —— Registro Automático de Heartbeat ————————————————————
+    dispositivo_id = request.data.get('dispositivo_id')
+    if not dispositivo_id:
+        if not request.session.session_key:
+            request.session.create()
+        dispositivo_id = request.session.session_key or f"desktop_{usuario.id}"
+
+    ip = request.META.get('REMOTE_ADDR', '')
+    HeartbeatLog.objects.update_or_create(
+        dispositivo_id=dispositivo_id,
+        defaults={'usuario': usuario, 'ip_address': ip, 'status': 'ONLINE'}
+    )
+    request.session['dispositivo_id'] = dispositivo_id
+
+    return Response({
+        "status": "sucesso",
+        "nome": usuario.nome,
+        "perfil": usuario.perfil,
+        "redirect": redirect_url,
+        "opcoes": _get_menu_opcoes(usuario.perfil),
+    })
+
+
+@api_view(['POST'])
+def api_set_senha(request):
+    """Define ou altera a senha de um usuário."""
+    usuario_id = request.data.get('usuario_id')
+    nova_senha = request.data.get('senha', '').strip()
+    
+    if not nova_senha:
+        return Response({"status": "erro", "mensagem": "Senha inválida."}, status=400)
+        
+    try:
+        usuario = Usuario.objects.get(id=usuario_id)
+        usuario.senha = hashlib.sha256(nova_senha.encode()).hexdigest()
+        usuario.save()
+        return Response({"status": "sucesso", "mensagem": "Senha atualizada."})
+    except Usuario.DoesNotExist:
+        return Response({"status": "erro", "mensagem": "Usuário não encontrado."}, status=404)
 
 
 @api_view(['POST'])

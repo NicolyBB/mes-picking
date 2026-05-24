@@ -266,7 +266,7 @@ def gerir_kpis(request):
 
     from authentication.models import Usuario
     supervisores = Usuario.objects.filter(perfil__in=['SUPERVISOR', 'ADM'], ativo=True).order_by('nome')
-    kpis = KPIDefinicao.objects.all().order_by('nome')
+    kpis = KPIDefinicao.objects.all().order_by('-favorito', 'nome')
     return render(request, 'gerir-kpis.html', {
         'kpis': kpis,
         'supervisores': supervisores,

@@ -2401,7 +2401,7 @@ body.pnl-pick.pnl-step-2 main.centro {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    align-items: flex-start;
+    align-items: center;
     padding: 60px 15px 20px 15px;
     width: 100%;
 }
@@ -2409,7 +2409,7 @@ body.pnl-pick.pnl-step-2 main.centro {
 body.pnl-pick.pnl-step-2 .centro h2 {
     color: #fff;
     margin-bottom: 25px;
-    text-align: left;
+    text-align: center;
     width: 100%;
 }
 
@@ -2418,6 +2418,8 @@ body.pnl-pick.pnl-step-2 .passo-label {
     font-size: 12px;
     margin-bottom: 10px;
     display: block;
+    text-align: center;
+    width: 100%;
 }
 
 body.pnl-pick.pnl-step-2 .campo-texto {
@@ -4786,15 +4788,34 @@ body.supervisor-mes *:focus-visible {
 }
 
 .status-off {
-    background-color: transparent;
-    color: #888;
-    border: 1px dashed #444;
+    background-color: transparent !important;
+    color: #888 !important;
+    border: 1px dashed #444 !important;
 }
 
 .status-processando {
-    background-color: #d4af11;
-    color: #003366;
+    background-color: #ffd200 !important;
+    color: #003366 !important;
     animation: pulse 1s infinite alternate;
+    border: 1px solid #ffd200;
+}
+
+.status-sucesso {
+    background-color: #28a745 !important;
+    color: #ffffff !important;
+    border: 1px solid #28a745;
+}
+
+.status-erro {
+    background-color: #dc3545 !important;
+    color: #ffffff !important;
+    border: 1px solid #dc3545;
+}
+
+.status-alerta {
+    background-color: #ffd200 !important;
+    color: #003366 !important;
+    border: 1px solid #ffd200;
 }
 
 @keyframes pulse {
@@ -5560,4 +5581,141 @@ body.dashboard-mes[data-theme="light"] .card-dark {
 body.dashboard-mes[data-theme="light"] .section {
     background: #ffffff;
     border-color: rgba(26, 39, 68, .12);
+}
+
+/* Custom status/communication feedback text styling to ensure readability on all themes */
+#status-comunicacao {
+    font-weight: 800 !important;
+    text-align: center !important;
+    margin-top: 15px !important;
+    font-size: 1.1rem !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: color 0.3s ease;
+}
+/* ================================================================
+   STATUS-COMUNICACAO — caixas com fundo, padding e texto correto
+================================================================ */
+#status-comunicacao {
+    display: block;
+    min-height: 38px;
+    padding: 8px 14px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    text-align: center;
+    line-height: 1.4;
+    width: 100%;
+    word-break: break-word;
+    transition: background 0.2s, color 0.2s;
+    margin-top: 10px;
+}
+
+#status-comunicacao:empty {
+    min-height: 0;
+    padding: 0 !important;
+    display: none;
+}
+
+#status-comunicacao.status-sucesso {
+    background: rgba(16, 185, 129, 0.18) !important;
+    border: 2px solid rgba(16, 185, 129, 0.5) !important;
+    color: #10b981 !important;
+}
+
+#status-comunicacao.status-erro {
+    background: #dc2626 !important;
+    border: 2px solid #ef4444 !important;
+    color: #ffffff !important;
+    font-size: 13px !important;
+    padding: 8px 14px !important;
+    min-height: 38px;
+}
+
+#status-comunicacao.status-alerta,
+#status-comunicacao.status-processando {
+    background: rgba(245, 158, 11, 0.22) !important;
+    border: 2px solid rgba(245, 158, 11, 0.6) !important;
+    color: #f59e0b !important;
+    padding: 8px 14px !important;
+    min-height: 38px;
+}
+
+/* Light theme overrides */
+body[data-theme="light"] #status-comunicacao.status-sucesso {
+    background: rgba(21, 128, 61, 0.12) !important;
+    border: 2px solid rgba(21, 128, 61, 0.4) !important;
+    color: #15803d !important;
+}
+body[data-theme="light"] #status-comunicacao.status-erro {
+    background: #b91c1c !important;
+    border: 2px solid #dc2626 !important;
+    color: #ffffff !important;
+}
+body[data-theme="light"] #status-comunicacao.status-alerta,
+body[data-theme="light"] #status-comunicacao.status-processando {
+    background: rgba(180, 83, 9, 0.15) !important;
+    border: 2px solid rgba(180, 83, 9, 0.4) !important;
+    color: #b45309 !important;
+}
+
+/* TV Mode adjustments */
+#tvContainer {
+    background-color: var(--bg-primary) !important;
+}
+
+#tvContainer .card {
+    background-color: var(--bg-secondary) !important;
+    border-color: rgba(212, 175, 17, 0.4) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+}
+
+#tvContainer .card-label {
+    color: var(--text-secondary) !important;
+}
+
+#tvContainer .card-subtitle {
+    color: var(--text-secondary) !important;
+}
+
+#tvContainer .card-value {
+    color: var(--accent) !important;
+    text-shadow: 0 2px 10px rgba(212, 175, 17, 0.2) !important;
+}
+
+/* Specific styling for TV Mode under Light Theme */
+body[data-theme="light"] #tvContainer {
+    background-color: #f0f4f8 !important;
+}
+
+body[data-theme="light"] #tvContainer .card {
+    background-color: #ffffff !important;
+    border: 2px solid rgba(0, 51, 102, 0.15) !important;
+    box-shadow: 0 15px 40px rgba(0, 51, 102, 0.08) !important;
+}
+
+body[data-theme="light"] #tvContainer .card-label {
+    color: #475569 !important; /* Slate gray */
+}
+
+body[data-theme="light"] #tvContainer .card-subtitle {
+    color: #64748b !important;
+}
+
+body[data-theme="light"] #tvContainer .card-value {
+    color: #003366 !important; /* Kyly corporate blue */
+    text-shadow: none !important;
+}
+
+body[data-theme="light"] #tvContainer h1 {
+    color: #003366 !important;
+}
+
+body[data-theme="light"] #tvContainer h1 span {
+    color: #b8940f !important;
+}
+
+body[data-theme="light"] #tvClock {
+    color: #003366 !important;
+    background-color: #ffffff !important;
+    border: 1px solid rgba(0, 51, 102, 0.15) !important;
 }

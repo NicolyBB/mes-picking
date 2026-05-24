@@ -93,7 +93,8 @@
                 </div>
                 {% if perfil_usuario == 'ADM' %}
                 <a href="{% url 'heartbeat_monitor' %}" style="padding:10px 18px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:10px;color:var(--text-primary);font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;display:flex;align-items:center;gap:6px;">
-                    💻 Dispositivos
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                    Dispositivos
                 </a>
                 {% endif %}
             </div>
@@ -119,44 +120,12 @@
                             <th class="exception-col-id">ID</th>
                             <th class="exception-col-operator">Operador</th>
                             <th class="exception-col-type">Tipo</th>
-                            <th class="exception-col-reason">Motivo</th>
+                            <th class="exception-col-reason">Motivo do Funcionário</th>
                             <th class="exception-col-action">Ação</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr class="exception-row" id="row-EX-9981">
-                            <td class="exception-id">EX-9981</td>
-                            <td class="exception-operator"><strong>Bruno Lima</strong><small>há 1 min</small></td>
-                            <td><span class="exception-type skip">Pular SKU</span></td>
-                            <td class="exception-reason">Falta de peça no endereço B07.04.2A</td>
-                            <td>
-                                <button class="authorize-btn" onclick="abrirMasterCode('EX-9981')">Autorizar</button>
-                                <button class="deny-btn" onclick="abrirMotivoNegacao('EX-9981')"
-                                    style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; margin-left:4px; cursor:pointer;">Negar</button>
-                            </td>
-                        </tr>
-                        <tr class="exception-row" id="row-EX-9979">
-                            <td class="exception-id">EX-9979</td>
-                            <td class="exception-operator"><strong>Patrícia Souza</strong><small>há 4 min</small></td>
-                            <td><span class="exception-type balance">Saldo Zero</span></td>
-                            <td class="exception-reason">Ref 1000044 sem saldo físico</td>
-                            <td>
-                                <button class="authorize-btn" onclick="abrirMasterCode('EX-9979')">Autorizar</button>
-                                <button class="deny-btn" onclick="abrirMotivoNegacao('EX-9979')"
-                                    style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; margin-left:4px; cursor:pointer;">Negar</button>
-                            </td>
-                        </tr>
-                        <tr class="exception-row" id="row-EX-9975">
-                            <td class="exception-id">EX-9975</td>
-                            <td class="exception-operator"><strong>Renata Cruz</strong><small>há 9 min</small></td>
-                            <td><span class="exception-type damage">Peça Danificada</span></td>
-                            <td class="exception-reason">Ref 1000022 — costura aberta</td>
-                            <td>
-                                <button class="authorize-btn" onclick="abrirMasterCode('EX-9975')">Autorizar</button>
-                                <button class="deny-btn" onclick="abrirMotivoNegacao('EX-9975')"
-                                    style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; margin-left:4px; cursor:pointer;">Negar</button>
-                            </td>
-                        </tr>
+                    <tbody id="tabelaExcecoesPendentes">
+                        <tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:30px;">Carregando exceções...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -166,15 +135,7 @@
                 <div class="exceptions-table-card" style="opacity: 0.8;">
                     <table class="exceptions-table">
                         <tbody id="historicoExcecoesBody">
-                            <!-- Preenchido via JS dinamicamente -->
-                            <tr class="exception-row">
-                                <td class="exception-id" style="color: #64748b;">EX-9970</td>
-                                <td class="exception-operator"><strong>Carla Mendes</strong><small>há 12 min</small>
-                                </td>
-                                <td><span class="exception-type skip">Pular SKU</span></td>
-                                <td>Falta de espaço na caixa</td>
-                                <td><span style="color: #10b981; font-weight: bold;">Autorizado por SUP-001</span></td>
-                            </tr>
+                            <tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">Carregando histórico...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -491,12 +452,94 @@
         carregarEquipe();
         setInterval(() => { if (!document.hidden) carregarEquipe(); }, 15000);
 
-        // --- MASTER CODE (AUTORIZAR) ---
+        // --- CSRF TOKEN HELPER ---
+        function getCsrfToken() {
+            const el = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (el) return el.value;
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? match[1] : '';
+        }
+
+        // --- CARREGAR EXCEÇÕES REAIS DA API ---
+        async function carregarExcecoes() {
+            try {
+                const res = await fetch('/api/excecoes/');
+                if (!res.ok) return;
+                const data = await res.json();
+
+                const pendentes = data.pendentes || [];
+                const historico = data.historico || [];
+                const totalPendentes = data.total_pendentes || 0;
+
+                // Atualiza badge
+                const badge = document.getElementById('badgeExcecoes');
+                if (badge) badge.innerText = totalPendentes;
+
+                // Renderiza pendentes
+                const tbodyPendentes = document.getElementById('tabelaExcecoesPendentes');
+                if (tbodyPendentes) {
+                    if (pendentes.length === 0) {
+                        tbodyPendentes.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:30px;">Nenhuma exceção pendente. ✅</td></tr>';
+                    } else {
+                        tbodyPendentes.innerHTML = pendentes.map(exc => {
+                            const tipoCls = exc.tipo === 'PULAR_SKU' ? 'skip' : exc.tipo === 'PECA_DANIFICADA' ? 'damage' : 'balance';
+                            const tipoLabel = exc.tipo === 'PULAR_SKU' ? 'Pular SKU' : exc.tipo === 'PECA_DANIFICADA' ? 'Peça Danificada' : 'Outro';
+                            return `<tr class="exception-row" id="excRow-${exc.id}">
+                                <td class="exception-id">EX-${exc.id}</td>
+                                <td class="exception-operator"><strong>${exc.operador}</strong><small>${exc.data_criacao}</small></td>
+                                <td><span class="exception-type ${tipoCls}">${tipoLabel}</span></td>
+                                <td class="exception-reason">
+                                    <strong>${exc.referencia}</strong> · ${exc.endereco}<br>
+                                    <span style="color:var(--text-secondary);font-size:12px;">${exc.motivo}</span>
+                                </td>
+                                <td>
+                                    <button class="authorize-btn" onclick="abrirMasterCode(${exc.id})">Autorizar</button>
+                                    <button class="deny-btn" onclick="abrirMotivoNegacao(${exc.id})"
+                                        style="background:#ef4444;color:white;border:none;padding:6px 12px;border-radius:6px;margin-left:4px;cursor:pointer;">Negar</button>
+                                </td>
+                            </tr>`;
+                        }).join('');
+                    }
+                }
+
+                // Renderiza histórico
+                const tbodyHist = document.getElementById('historicoExcecoesBody');
+                if (tbodyHist) {
+                    if (historico.length === 0) {
+                        tbodyHist.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary);padding:20px;">Nenhum histórico ainda.</td></tr>';
+                    } else {
+                        tbodyHist.innerHTML = historico.map(exc => {
+                            const tipoCls = exc.tipo === 'PULAR_SKU' ? 'skip' : exc.tipo === 'PECA_DANIFICADA' ? 'damage' : 'balance';
+                            const tipoLabel = exc.tipo === 'PULAR_SKU' ? 'Pular SKU' : exc.tipo === 'PECA_DANIFICADA' ? 'Peça Danificada' : 'Outro';
+                            const statusColor = exc.status === 'AUTORIZADO' ? '#10b981' : '#ef4444';
+                            const statusLabel = exc.status === 'AUTORIZADO' ? `✅ Autorizado por ${exc.supervisor || '—'}` : `❌ Negado: ${exc.justificativa_supervisor || '—'}`;
+                            return `<tr class="exception-row">
+                                <td class="exception-id" style="color:#64748b;">EX-${exc.id}</td>
+                                <td class="exception-operator"><strong>${exc.operador}</strong><small>${exc.data_criacao}</small></td>
+                                <td><span class="exception-type ${tipoCls}">${tipoLabel}</span></td>
+                                <td>${exc.motivo}</td>
+                                <td><span style="color:${statusColor};font-weight:bold;">${statusLabel}</span></td>
+                            </tr>`;
+                        }).join('');
+                    }
+                }
+
+            } catch (e) {
+                console.error('Erro ao carregar exceções:', e);
+            }
+        }
+
+        // Carrega exceções na inicialização e a cada 15s
+        carregarExcecoes();
+        setInterval(() => { if (!document.hidden) carregarExcecoes(); }, 15000);
+
+
         function abrirMasterCode(idExcecao) {
             excecaoAtual = idExcecao;
             document.getElementById('masterCodeOverlay').classList.add('active');
             document.getElementById('masterCodeOverlay').setAttribute('aria-hidden', 'false');
-            document.getElementById('excecaoAlvo').innerText = idExcecao;
+            document.getElementById('excecaoAlvo').innerText = 'EX-' + idExcecao;
+            document.getElementById('codigoSupervisorExcecao').value = '';
 
             if (!document.getElementById('btnCamAuto')) {
                 const btn = document.createElement('button');
@@ -513,21 +556,41 @@
         function fecharMasterCode() {
             document.getElementById('masterCodeOverlay').classList.remove('active');
             document.getElementById('masterCodeOverlay').setAttribute('aria-hidden', 'true');
+            document.getElementById('codigoSupervisorExcecao').value = '';
         }
 
-        function confirmarMasterCode() {
-            const row = document.getElementById('row-' + excecaoAtual);
-            if (row) {
-                // Move para o histórico com status de autorizado
-                row.innerHTML = row.innerHTML.replace(/<td.*<button.*<\/td>/g, '<td><span style="color: #10b981; font-weight: bold;">Autorizado</span></td>');
-                document.getElementById('historicoExcecoesBody').prepend(row);
-
-                // Atualiza badge
-                const badge = document.getElementById('badgeExcecoes');
-                badge.innerText = parseInt(badge.innerText) - 1;
+        async function confirmarMasterCode() {
+            const cracha = document.getElementById('codigoSupervisorExcecao').value.trim();
+            if (!cracha) {
+                alert('Bipe ou digite o cachá do supervisor para autorizar.');
+                return;
             }
-            alert('Exceção Autorizada!');
-            fecharMasterCode();
+
+            const btnConfirmar = document.querySelector('.master-code-btn.confirm');
+            if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'Autorizando...'; }
+
+            try {
+                const res = await fetch(`/api/excecoes/${excecaoAtual}/autorizar/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify({ cracha: cracha })
+                });
+                const dados = await res.json();
+
+                if (res.ok && dados.status === 'sucesso') {
+                    alert(`✅ ${dados.mensagem}`);
+                    fecharMasterCode();
+                    carregarExcecoes(); // Recarrega as exceções reais
+                } else {
+                    alert(`❌ ${dados.mensagem || 'Erro ao autorizar.'}`);
+                    document.getElementById('codigoSupervisorExcecao').value = '';
+                    document.getElementById('codigoSupervisorExcecao').focus();
+                }
+            } catch (e) {
+                alert('Erro de conexão com o servidor.');
+            } finally {
+                if (btnConfirmar) { btnConfirmar.disabled = false; btnConfirmar.textContent = 'Confirmar'; }
+            }
         }
 
         // --- NEGAR EXCEÇÃO ---
@@ -535,7 +598,9 @@
             excecaoAtual = idExcecao;
             document.getElementById('modalNegacao').classList.add('active');
             document.getElementById('modalNegacao').setAttribute('aria-hidden', 'false');
-            document.getElementById('excecaoNegarAlvo').innerText = idExcecao;
+            document.getElementById('excecaoNegarAlvo').innerText = 'EX-' + idExcecao;
+            document.getElementById('motivoNegacao').value = '';
+            document.getElementById('crachaNegacao').value = '';
 
             if (!document.getElementById('btnCamNega')) {
                 const btn = document.createElement('button');
@@ -552,27 +617,38 @@
         function fecharModalNegacao() {
             document.getElementById('modalNegacao').classList.remove('active');
             document.getElementById('modalNegacao').setAttribute('aria-hidden', 'true');
-        }
-
-        function confirmarNegacao() {
-            const motivo = document.getElementById('motivoNegacao').value;
-            if (!motivo) return alert('Por favor, informe o motivo.');
-
-            const row = document.getElementById('row-' + excecaoAtual);
-            if (row) {
-                // Move para o histórico com status de negado e o motivo
-                row.innerHTML = row.innerHTML.replace(/<td.*<button.*<\/td>/g, `<td><span style="color: #ef4444; font-weight: bold;">Negado: ${motivo}</span></td>`);
-                document.getElementById('historicoExcecoesBody').prepend(row);
-
-                // Atualiza badge
-                const badge = document.getElementById('badgeExcecoes');
-                badge.innerText = parseInt(badge.innerText) - 1;
-            }
-
             document.getElementById('motivoNegacao').value = '';
             document.getElementById('crachaNegacao').value = '';
-            alert('Exceção Negada e movida para o histórico!');
-            fecharModalNegacao();
+        }
+
+        async function confirmarNegacao() {
+            const motivo = document.getElementById('motivoNegacao').value.trim();
+            const cracha = document.getElementById('crachaNegacao').value.trim();
+            if (!motivo) return alert('Por favor, informe o motivo.');
+
+            const btnNegar = document.querySelector('#modalNegacao .master-code-btn:not(.cancel)');
+            if (btnNegar) { btnNegar.disabled = true; btnNegar.textContent = 'Negando...'; }
+
+            try {
+                const res = await fetch(`/api/excecoes/${excecaoAtual}/negar/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                    body: JSON.stringify({ motivo: motivo, cracha: cracha })
+                });
+                const dados = await res.json();
+
+                if (res.ok && dados.status === 'sucesso') {
+                    alert(`❌ Exceção Negada! Motivo registrado.`);
+                    fecharModalNegacao();
+                    carregarExcecoes();
+                } else {
+                    alert(`Erro: ${dados.mensagem || 'Erro ao negar.'}`);
+                }
+            } catch (e) {
+                alert('Erro de conexão com o servidor.');
+            } finally {
+                if (btnNegar) { btnNegar.disabled = false; btnNegar.textContent = 'Negar Exceção'; }
+            }
         }
 
         // --- CAMERA SCANNER LOGIC ---

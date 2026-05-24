@@ -109,13 +109,32 @@ class KPIDefinicao(models.Model):
     tom_cor = models.CharField(max_length=10, choices=COR_CHOICES, default='GREEN')
     supervisor_resp = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, blank=True, limit_choices_to={'perfil': 'SUPERVISOR'}, db_constraint=False)
     ativo = models.BooleanField(default=True)
+    favorito = models.BooleanField(default=False)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'kpi_definicao'
+        ordering = ['-favorito', 'nome']
 
     def __str__(self):
         return self.nome
+
+
+# ──────────────────────────────────────────────
+# META GLOBAL (singleton — valores de referência)
+# ──────────────────────────────────────────────
+class MetaGlobal(models.Model):
+    meta_pph      = models.IntegerField(default=130)
+    meta_caixas   = models.IntegerField(default=300)
+    meta_acuracia = models.IntegerField(default=99)
+    meta_streak   = models.IntegerField(default=10)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'meta_global'
+
+    def __str__(self):
+        return f'MetaGlobal (PPH={self.meta_pph}, Caixas={self.meta_caixas})'
 
 
 # ──────────────────────────────────────────────
