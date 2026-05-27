@@ -4939,10 +4939,34 @@ body.supervisor-mes *:focus-visible {
 }
 
 /* Gráfico de barras PPH por turno */
-.grafico-container {
-    height: 200px;
+body.dashboard-mes .grafico-container {
+    height: 260px; /* Aumentado para acomodar as barras sem estrangular */
     display: flex;
     align-items: flex-end;
+    padding: 25px 0 0 0; /* Cria um teto invisível para proteger o título */
+}
+
+body.dashboard-mes .grafico-barras {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    gap: 20px;
+    width: 100%;
+    height: 100%;
+    padding: 0 10px;
+}
+
+body.dashboard-mes .barra-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1;
+    max-width: 120px;
+    /* O "pulo do gato": reserva exatos 45px para os textos de baixo, 
+       garantindo que 100% da barra nunca transborde no topo! */
+    height: calc(100% - 45px); 
+    gap: 8px;
 }
 
 .grafico-barras {
