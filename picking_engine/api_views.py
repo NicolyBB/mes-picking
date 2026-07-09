@@ -1252,24 +1252,37 @@ def api_heartbeat(request):
 
 @api_view(['GET'])
 def api_heartbeat_status(request):
-    """Retorna o status de todos os coletores."""
+    """Retorna o status dos coletores (com filtro de fantasmas e IPs repetidos)."""
     if not _check_api_permission(request, ['ADM', 'SUPERVISOR']):
         return Response({"status": "erro", "mensagem": "Acesso negado."}, status=403)
 
     agora = timezone.now()
     timeout_limite = agora - timedelta(minutes=1)
     offline_limite = agora - timedelta(minutes=5)
+    limite_exibicao = agora - timedelta(hours=24) # Esconde lixo mais velho que 24h
 
-    coletores = HeartbeatLog.objects.all().select_related('usuario').order_by('-ultimo_sinal')
+    # Busca apenas registros recentes, ordenados do mais novo pro mais velho
+    coletores = HeartbeatLog.objects.filter(
+        ultimo_sinal__gte=limite_exibicao
+    ).select_related('usuario').order_by('-ultimo_sinal')
+    
     data = []
+    ips_vistos = set()
+
     for c in coletores:
+        # Evita poluição visual de múltiplos IDs fantasmas gerados pelo mesmo aparelho (Deduplicação)
+        chave_duplicata = f"{c.ip_address}_{c.usuario_id or 'anon'}"
+        if chave_duplicata in ips_vistos:
+            continue
+        ips_vistos.add(chave_duplicata)
+
         # Atualiza status baseado no tempo de inatividade
         if c.ultimo_sinal < offline_limite:
             if c.status != 'OFFLINE':
                 c.status = 'OFFLINE'
                 c.save(update_fields=['status'])
 
-                # Dispara webhooks de DEVICE_OFFLINE
+                # Dispara webhooks de DEVICE_OFFLINE (Apenas se for a primeira vez que cai)
                 for wh in WebhookConfig.objects.filter(evento_gatilho='DEVICE_OFFLINE', ativo=True):
                     _disparar_webhook_async(wh, {
                         "event": "DEVICE_OFFLINE",
@@ -1303,7 +1316,13 @@ def api_heartbeat_status(request):
     timeout = sum(1 for d in data if d['status'] == 'TIMEOUT')
     offline = sum(1 for d in data if d['status'] == 'OFFLINE')
 
-    return Response({"coletores": data, "online": online, "timeout": timeout, "offline": offline, "total": len(data)})
+    return Response({
+        "coletores": data, 
+        "online": online, 
+        "timeout": timeout, 
+        "offline": offline, 
+        "total": len(data)
+    })
 
 
 @csrf_exempt
