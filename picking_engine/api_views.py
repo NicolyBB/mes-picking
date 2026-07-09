@@ -991,11 +991,12 @@ def api_equipe_supervisor(request):
             ativo=True
         ).order_by('nome')
     else:
-        # ADM vê todos os colaboradores com seu supervisor vinculado
         equipe = Usuario.objects.filter(perfil='COLABORADOR', ativo=True).order_by('nome')
     
+    # CORREÇÃO: Limites de inatividade espelhados com o Heartbeat
     agora = timezone.now()
-    limite = agora - timedelta(minutes=5)
+    timeout_limite = agora - timedelta(minutes=1)
+    offline_limite = agora - timedelta(minutes=5)
 
     from django.db.models import Sum
     from datetime import datetime
@@ -1007,16 +1008,16 @@ def api_equipe_supervisor(request):
 
     data = []
     for u in equipe:
-        # CORREÇÃO: campo correto é 'usuario', não 'usuario_vinculado'
         hb = HeartbeatLog.objects.filter(usuario=u).order_by('-ultimo_sinal').first()
         status_disp = 'OFFLINE'
+        
+        # Injeta o status real do coletor baseado no milissegundo do último ping
         if hb:
-            if hb.ultimo_sinal >= limite:
+            if hb.ultimo_sinal >= timeout_limite:
                 status_disp = 'ONLINE'
-            else:
+            elif hb.ultimo_sinal >= offline_limite:
                 status_disp = 'TIMEOUT'
-                
-        # KPIs do Operador
+
         sessoes = SessaoPicking.objects.filter(colaborador=u, inicio__gte=dt_ini, inicio__lte=dt_fim)
         total_p = sessoes.aggregate(s=Sum('pecas_bipadas'))['s'] or 0
         total_h = sum(
