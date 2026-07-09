@@ -951,7 +951,8 @@ def api_historico_aging(request):
     perfil = request.session.get('perfil_usuario')
     usuario_id = request.session.get('usuario_id')
     
-    qs = LogAgingStock.objects.all().select_related('autor', 'supervisor_resp')
+    # CORREÇÃO: Ordenado para que a diretoria veja as liquidações mais recentes primeiro
+    qs = LogAgingStock.objects.select_related('autor', 'supervisor_resp').order_by('-data_hora')
     
     # Supervisor só vê os atribuídos a ele
     if perfil == 'SUPERVISOR':
@@ -1074,7 +1075,8 @@ def api_funcionario_logs(request, pk):
         return Response({"status": "erro", "mensagem": "Acesso negado."}, status=403)
     
     from authentication.models import LogAuditoriaUsuario
-    logs = LogAuditoriaUsuario.objects.filter(usuario_alvo=u).select_related('autor')
+    # CORREÇÃO: Adicionado o order_by('-data_hora') para exibir os eventos mais recentes no topo
+    logs = LogAuditoriaUsuario.objects.filter(usuario_alvo=u).select_related('autor').order_by('-data_hora')
     
     data = [{
         "acao": log.acao,
