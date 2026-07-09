@@ -64,7 +64,13 @@
                             <div style="font-size:11px;color:var(--text-secondary);font-family:monospace;margin-top:2px;">{{ kpi.formula|truncatechars:40 }}</div>
                         </div>
                     </div>
-                    <span class="badge-tom badge-tom-{{ kpi.tom_cor|lower }}">{{ kpi.tom_cor }}</span>
+                    <span class="badge-tom badge-tom-{{ kpi.tom_cor|lower }}">
+                        {% if kpi.tom_cor == 'GREEN' %}Bom
+                        {% elif kpi.tom_cor == 'YELLOW' %}Atenção
+                        {% elif kpi.tom_cor == 'RED' %}Crítico
+                        {% elif kpi.tom_cor == 'BLUE' %}Info
+                        {% else %}{{ kpi.tom_cor }}{% endif %}
+                    </span>
                 </div>
                 <div style="font-size:.85rem;color:var(--text-secondary);margin-bottom:14px;">
                     Meta: <strong style="color:var(--text-primary);">{{ kpi.meta|default:"—" }}</strong>
