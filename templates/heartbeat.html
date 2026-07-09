@@ -490,6 +490,13 @@
 </head>
 
 <body class="hb-page">
+    <script>
+        (function() {
+            if (localStorage.getItem("theme") === "light") {
+                document.body.setAttribute("data-theme", "light");
+            }
+        })();
+    </script>
     {% csrf_token %}
 
     <header class="hb-header">
@@ -670,7 +677,7 @@
                 </td>
             </tr>`;
             }).join('');
-        }
+        }// Theme Toggle Logic
 
         function filtrarTabela() {
             const term = document.getElementById('searchDev').value.toLowerCase();
@@ -738,24 +745,26 @@
         carregarDispositivos();
         setInterval(() => { if (!document.hidden) carregarDispositivos(); }, 15000);
 
-        // Theme Toggle Logic
+        // Theme Toggle Logic Unificada
         const btnTheme = document.getElementById('themeToggleHb');
-        const savedTheme = localStorage.getItem('themeHb') || 'dark';
-        if (savedTheme === 'light') {
-            document.body.setAttribute('data-theme', 'light');
+        if (localStorage.getItem("theme") === "light") {
             btnTheme.textContent = '☀️';
+        } else {
+            btnTheme.textContent = '🌙';
         }
         
         btnTheme.addEventListener('click', () => {
             const current = document.body.getAttribute('data-theme');
-            if (current === 'light') {
-                document.body.removeAttribute('data-theme');
-                btnTheme.textContent = '🌙';
-                localStorage.setItem('themeHb', 'dark');
-            } else {
+            const next = current === "light" ? "" : "light";
+            
+            if (next === "light") {
                 document.body.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
                 btnTheme.textContent = '☀️';
-                localStorage.setItem('themeHb', 'light');
+            } else {
+                document.body.removeAttribute('data-theme');
+                localStorage.setItem('theme', 'dark'); // fallback semântico
+                btnTheme.textContent = '🌙';
             }
         });
     </script>

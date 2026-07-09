@@ -14,6 +14,11 @@
 
     // INICIALIZAÇÃO PRINCIPAL
     document.addEventListener("DOMContentLoaded", function () {
+        // testando consistência de escolha entre páginas
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "light") document.body.setAttribute("data-theme", "light");
+        else document.body.removeAttribute("data-theme");
+        // ---
         setupThemeToggle();
         setupKeyboardNav();
         atualizarData();
@@ -1174,19 +1179,28 @@
     // 5. RESTANTE DO DASHBOARD E PAINEL (Tabelas, Gráficos, Temas)
     // ==========================================================================
 
+    // modificado setupThemeToggle e removido applyTheme, testando integração.
     function setupThemeToggle() {
         const toggle = document.getElementById("themeToggle");
         const icon = toggle ? toggle.querySelector(".theme-icon") : null;
-        if (!toggle || !icon || toggle.dataset.bound === "true") return;
+        
+        // Se o botão existir na tela, ajusta o ícone visualmente para bater com o estado atual
+        if (icon) {
+            const currentTheme = document.body.getAttribute("data-theme");
+            icon.textContent = currentTheme === "light" ? "☀️" : "🌙";
+        }
 
-        const savedTheme = localStorage.getItem("theme");
-        const initialTheme = savedTheme === "light" ? "light" : "";
-        applyTheme(initialTheme, icon);
+        // Se a tela não tiver o botão, a função para por aqui (mas o tema já foi aplicado na inicialização)
+        if (!toggle || !icon || toggle.dataset.bound === "true") return;
 
         toggle.addEventListener("click", function () {
             const current = document.body.getAttribute("data-theme");
             const next = current === "light" ? "" : "light";
-            applyTheme(next, icon);
+            
+            if (next === "light") document.body.setAttribute("data-theme", "light");
+            else document.body.removeAttribute("data-theme");
+            
+            icon.textContent = next === "light" ? "☀️" : "🌙";
             localStorage.setItem("theme", next);
 
             icon.classList.add("spin");
@@ -1195,11 +1209,7 @@
 
         toggle.dataset.bound = "true";
     }
-
-    function applyTheme(theme, icon) {
-        document.body.setAttribute("data-theme", theme);
-        icon.textContent = theme === "light" ? "☀️" : "🌙";
-    }
+    // ---
 
     function atualizarData() {
         const dataAtual = document.getElementById("dataAtual");

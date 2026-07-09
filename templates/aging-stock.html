@@ -115,26 +115,26 @@
         <!-- Faixas de Envelhecimento que o seu CSS possuía classes mas foram cortadas no HTML -->
         <section class="section">
             <h2>Distribuição por Faixa de Envelhecimento</h2>
-            <div class="aging-ranges">
-                <div class="aging-range">
-                    <span class="range-label">0 - 30 dias</span>
-                    <div class="range-bar range-0-7" style="height: 120px; display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: bold; padding-bottom: 5px;">65%</div>
-                    <span class="range-count">101 SKUs</span>
+            <div class="aging-ranges" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; align-items: flex-end; min-height: 200px; text-align: center; margin-top: 20px;">
+                <div class="aging-range" style="display: flex; flex-direction: column; height: 100%;">
+                    <span class="range-label" style="margin-bottom: auto; font-weight: 600; color: var(--text-primary); font-size: 13px; padding-bottom: 15px;">0 - 30 dias</span>
+                    <div class="range-bar" style="height: 120px; background: linear-gradient(180deg, var(--success) 0%, #1e7e34 100%); display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: bold; padding-bottom: 8px; border-radius: 6px 6px 0 0; opacity: 0.9;">65%</div>
+                    <span class="range-count" style="margin-top: 10px; color: var(--text-secondary); font-size: 12px; font-weight: 600;">101 SKUs</span>
                 </div>
-                <div class="aging-range">
-                    <span class="range-label">31 - 60 dias</span>
-                    <div class="range-bar range-8-15" style="height: 80px; display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: bold; padding-bottom: 5px;">20%</div>
-                    <span class="range-count">32 SKUs</span>
+                <div class="aging-range" style="display: flex; flex-direction: column; height: 100%;">
+                    <span class="range-label" style="margin-bottom: auto; font-weight: 600; color: var(--text-primary); font-size: 13px; padding-bottom: 15px;">31 - 60 dias</span>
+                    <div class="range-bar" style="height: 80px; background: linear-gradient(180deg, #3498db 0%, #2980b9 100%); display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: bold; padding-bottom: 8px; border-radius: 6px 6px 0 0; opacity: 0.9;">20%</div>
+                    <span class="range-count" style="margin-top: 10px; color: var(--text-secondary); font-size: 12px; font-weight: 600;">32 SKUs</span>
                 </div>
-                <div class="aging-range">
-                    <span class="range-label">61 - 90 dias</span>
-                    <div class="range-bar range-16-30" style="height: 50px; display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: bold; padding-bottom: 5px;">12%</div>
-                    <span class="range-count">18 SKUs</span>
+                <div class="aging-range" style="display: flex; flex-direction: column; height: 100%;">
+                    <span class="range-label" style="margin-bottom: auto; font-weight: 600; color: var(--text-primary); font-size: 13px; padding-bottom: 15px;">61 - 90 dias</span>
+                    <div class="range-bar" style="height: 50px; background: linear-gradient(180deg, var(--accent) 0%, #b8940f 100%); display: flex; align-items: flex-end; justify-content: center; color: #000; font-weight: bold; padding-bottom: 8px; border-radius: 6px 6px 0 0; opacity: 0.9;">12%</div>
+                    <span class="range-count" style="margin-top: 10px; color: var(--text-secondary); font-size: 12px; font-weight: 600;">18 SKUs</span>
                 </div>
-                <div class="aging-range">
-                    <span class="range-label">+90 dias (Crítico)</span>
-                    <div class="range-bar range-30-plus" style="height: 30px; display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: bold; padding-bottom: 5px;">3%</div>
-                    <span class="range-count">5 SKUs</span>
+                <div class="aging-range" style="display: flex; flex-direction: column; height: 100%;">
+                    <span class="range-label" style="margin-bottom: auto; font-weight: 600; color: var(--text-primary); font-size: 13px; padding-bottom: 15px;">+90 dias (Crítico)</span>
+                    <div class="range-bar" style="height: 30px; background: linear-gradient(180deg, #ff6b6b 0%, #c0392b 100%); display: flex; align-items: flex-end; justify-content: center; color: #fff; font-weight: bold; padding-bottom: 8px; border-radius: 6px 6px 0 0; opacity: 0.9;">3%</div>
+                    <span class="range-count" style="margin-top: 10px; color: var(--text-secondary); font-size: 12px; font-weight: 600;">5 SKUs</span>
                 </div>
             </div>
         </section>
