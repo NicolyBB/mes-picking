@@ -400,14 +400,22 @@
                 const kpiData = (kpisArr || _kpiCacheArr).find(k => k.cracha === op.cracha);
                 const rankData = rankingArr.find(r => r.cracha === op.cracha);
                 
-                const isWorking = !!(kpiData || op.login_status);
-                
                 let wifiClass = 'error';
                 let wifiTitle = 'Desconectado';
-                if (op.dispositivo_status === 'ONLINE') { wifiClass = 'success'; wifiTitle = 'Conectado (Bipando)'; }
-                else if (op.dispositivo_status === 'TIMEOUT') { wifiClass = 'warning'; wifiTitle = 'Ausente (> 5 min sem bip)'; }
+                let statusClass = 'error'; // Bolinha vermelha por padrão
                 
-                const statusClass = kpiData ? '' : (op.login_status ? 'idle' : 'error');
+                if (op.dispositivo_status === 'ONLINE') { 
+                    wifiClass = 'success'; 
+                    wifiTitle = 'Conectado (Bipando)'; 
+                    statusClass = ''; // Bolinha verde pulsante
+                }
+                else if (op.dispositivo_status === 'TIMEOUT') { 
+                    wifiClass = 'warning'; 
+                    wifiTitle = 'Ausente (> 5 min sem bip)'; 
+                    statusClass = 'idle'; // Bolinha amarela
+                }
+                
+                const isWorking = op.dispositivo_status === 'ONLINE';
 
                 const pph   = kpiData ? kpiData.pph : (rankData ? rankData.pph : '—');
                 const caixa = kpiData ? kpiData.pedido : (rankData ? rankData.caixas + ' (Finalizadas)' : '—');
