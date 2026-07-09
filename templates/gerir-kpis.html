@@ -58,7 +58,15 @@
                  data-supervisor="{{ kpi.supervisor_resp_id|default:'' }}">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
                     <div style="display:flex;align-items:center;gap:10px;">
-                        <span style="font-size:1.5rem;">{{ kpi.icone }}</span>
+                        <span style="font-size:1.5rem;">
+                            {% if 'Caixas' in kpi.nome %}📦
+                            {% elif 'Lead' in kpi.nome %}⏱️
+                            {% elif 'PPH' in kpi.nome %}⚡
+                            {% elif 'Streak' in kpi.nome %}🔥
+                            {% elif 'Acerto' in kpi.nome %}🎯
+                            {% elif 'Todos' in kpi.nome %}📋
+                            {% else %}📊{% endif %}
+                        </span>
                         <div>
                             <div style="font-weight:700;color:var(--text-primary);">{{ kpi.nome }}</div>
                             <div style="font-size:11px;color:var(--text-secondary);font-family:monospace;margin-top:2px;">{{ kpi.formula|truncatechars:40 }}</div>
