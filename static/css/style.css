@@ -474,17 +474,28 @@ body.pnl-pick .operator-meta {
     color: var(--text-secondary);
 }
 
+/* Atualize as cores do sinal de Wi-Fi no painel do supervisor */
 body.pnl-pick .operator-signal {
     width: 20px;
     height: 20px;
-    stroke: var(--success);
+    stroke: currentColor; /* O SVG agora herda a cor dinamicamente */
+    color: #9aa4b2; /* Cor padrão Cinza para Offline */
     fill: none;
     stroke-width: 2;
     stroke-linecap: round;
+    transition: color 0.3s ease;
+}
+
+body.pnl-pick .operator-signal.success {
+    color: var(--success);
+}
+
+body.pnl-pick .operator-signal.warning {
+    color: var(--warning);
 }
 
 body.pnl-pick .operator-signal.error {
-    stroke: var(--danger);
+    color: var(--danger);
 }
 
 body.pnl-pick .operator-stats {
